@@ -7,10 +7,10 @@ from hover_drone_gym.envs.game_logic import HoverDrone
 class HoverDroneEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     def __init__(self,
-                screen_size: (800, 500),
-                _building_gap: 120,
-                _spawn_rate: 6,
-                _FPS: 60,
+                screen_size=(800, 500),
+                _building_gap=120,
+                _spawn_rate=6,
+                _FPS=60,
                 ):
         
         self.action_space = spaces.Discrete(4)
