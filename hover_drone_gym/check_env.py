@@ -1,4 +1,4 @@
-from stable_baselines3.common.env_checker import check_env
+from gym.utils.env_checker import check_env
 from hover_drone_gym.envs.hover_drone_env import HoverDroneEnv
 
 env = HoverDroneEnv()

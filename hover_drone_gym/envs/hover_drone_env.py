@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 import pygame
-from hover_drone_gym.envs.game_logic import HoverDrone
+from hover_drone_gym.envs.game_logic.hover_drone import HoverDrone
 
 class HoverDroneEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -45,8 +45,7 @@ class HoverDroneEnv(gym.Env):
 
         return obs, reward, terminated, truncated, info
     
-    def reset(self, seed=None):
-        print("resseting-1")
+    def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self._game = HoverDrone(self._screen_size, self._building_gap, self._spawn_rate, self.FPS)
         self._game.reset()

@@ -3,6 +3,8 @@ from hover_drone_gym.envs.utils import load_images
 from pygame.locals import *
 from pygame.sprite import *
 import random
+from hover_drone_gym.envs.game_logic.drone import Drone
+from hover_drone_gym.envs.game_logic.building import Building
 
 class HoverDrone:
     def __init__(self, screen_size, building_gap, spawn_rate, FPS):
@@ -120,82 +122,3 @@ class HoverDrone:
 
         self.moving = False
         self.gameover = False
-
-class Drone(pygame.sprite.Sprite):
-    def __init__(self,x,y, sw, hs, images):
-        pygame.sprite.Sprite.__init__(self) 
-        self.image = images["drone"]
-        self.rect = self.image.get_rect()
-        self.rect.center = [x,y]
-        self.velocity_x = 0
-        self.velocity_y = 0
-        self.is_alive = True
-        self.screen_width = sw
-        self.screen_height = hs
-
-    def kia(self):
-        self.is_alive = False
-
-    def action(self, key):
-        self.moving = True
-        #Resetting velocities
-        self.velocity_x = 0
-        self.velocity_y = 0
-
-        #Adjusting the velocities 
-        if key==0:
-            self.velocity_y = -10
-        if key==1:
-            self.velocity_y = 10
-        if key==2:
-            self.velocity_x = -10
-        if key==3:
-            self.velocity_x = 10
-
-    def update(self):
-        if(not self.is_alive):
-            return
-        
-        #updating the velocities 
-        self.rect.x += self.velocity_x
-        self.rect.y += self.velocity_y
-
-        #make it stay on the screen and not move off
-        if self.rect.left < 0:
-            self.rect.left = 0
-        if self.rect.right > self.screen_width:
-            self.rect.right = self.screen_width
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > self.screen_height:
-            self.rect.bottom = self.screen_height
-
-#creating buildings 
-class Building(pygame.sprite.Sprite):
-    def __init__(self,x,y,position, building_gap, images):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = images["building"]
-        self.rect = self.image.get_rect()
-        self.passed = False
-        self.pos = position
-        self.building_gap = building_gap
-
-        if position == 1:
-            self.image = pygame.transform.flip(self.image,False,True)
-            self.rect.bottomleft = [x,y - self.building_gap]
-        if position == -1:
-            self.rect.topleft = [x,y + self.building_gap]
-    
-    def evaluate(self, x):
-        if(x > self.rect.x and not self.passed):
-            self.passed = True
-            return True
-        return False
-    
-    def horizontal_dis(self, x):
-        return self.rect.x - x
-
-    def update(self):
-        self.rect.x -= 4
-        if self.rect.right < 0:
-            self.kill()
