@@ -43,7 +43,8 @@ class Drone(pygame.sprite.Sprite):
         self.diff_amplitude = 0.003
 
         # Default propeller force
-        self.thruster_mean = 0.04
+        self.thruster_default = 0.04
+
         self.mass = 1
 
         # Length from center of mass to propeller
@@ -59,10 +60,10 @@ class Drone(pygame.sprite.Sprite):
         self.acceleration_x = 0
         self.acceleration_y = self.gravity
         self.angular_acceleration = 0
-        thruster_left = self.thruster_mean
-        thruster_right = self.thruster_mean
+        thruster_left = self.thruster_default
+        thruster_right = self.thruster_default
 
-        # Adjusting the velocities 
+        # Adjusting the thrust based on key press
         if key[K_UP]:
             thruster_left += self.thruster_amplitude
             thruster_right += self.thruster_amplitude
@@ -74,10 +75,17 @@ class Drone(pygame.sprite.Sprite):
         if key[K_RIGHT]:
             thruster_right -= self.diff_amplitude
         
-        self.acceleration_x += (-(thruster_left + thruster_right) * sin(self.angle * pi / 180) / self.mass)
-        self.acceleration_y += (-(thruster_left + thruster_right) * cos(self.angle * pi / 180) / self.mass)
+        total_thrust = thruster_left + thruster_right
+        angle_radian = self.angle * pi / 180
+
+        # calculate x y acceleration based on angle
+        self.acceleration_x += (-(total_thrust) * sin(angle_radian) / self.mass)
+        self.acceleration_y += (-(total_thrust) * cos(angle_radian) / self.mass)
+
+        # negative = right rotation in pygame
         self.angular_acceleration += self.arm * (thruster_right - thruster_left) / self.mass
 
+        # update velocities
         self.velocity_x += self.acceleration_x
         self.velocity_y += self.acceleration_y
         self.angular_speed += self.angular_acceleration
@@ -88,7 +96,7 @@ class Drone(pygame.sprite.Sprite):
         
         pygame.transform.rotate(self.image, self.angle)
 
-        #updating the velocities 
+        #updating the positions 
         self.rect.x += self.velocity_x
         self.rect.y += self.velocity_y
         self.angle += self.angular_speed
