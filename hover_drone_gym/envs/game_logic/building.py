@@ -20,7 +20,6 @@ class Building(pygame.sprite.Sprite):
     
     def evaluate(self, x):
         if(x > self.rect.bottomright[0] and not self.passed):
-            print('passed')
             self.passed = True
             return True
         return False

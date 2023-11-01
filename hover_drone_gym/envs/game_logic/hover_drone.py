@@ -189,7 +189,6 @@ class HoverDrone:
 
         # update drone
         self.step += 1
-        print(int(self.step * 0.3) % 2)
         if(int(self.step * 0.3) % 2):
             player_sprite = self.drone_image
         else:
