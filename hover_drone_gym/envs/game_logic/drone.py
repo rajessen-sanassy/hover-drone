@@ -6,15 +6,15 @@ from math import sin, cos, pi
 
 FPS = 60
 WIDTH = 800
-HEIGHT = 800
+HEIGHT = 500
 BASE_PATH = os.path.realpath("./hover_drone_gym/assets")
 DRONE_IMAGE = os.path.join(BASE_PATH, 'drone.png')
 BG_IMAGE = os.path.join(BASE_PATH, 'background.png')
 
 class Drone(pygame.sprite.Sprite):
-    def __init__(self, x, y, screen_width, screen_height):
+    def __init__(self, x, y, screen_width, screen_height, drone_image):
         pygame.sprite.Sprite.__init__(self) 
-        self.image = pygame.image.load(DRONE_IMAGE).convert_alpha()
+        self.image = drone_image
         self.rect = self.image.get_rect()
         self.rect.center = [x,y]
         self.is_alive = True
@@ -64,15 +64,15 @@ class Drone(pygame.sprite.Sprite):
         thruster_right = self.thruster_default
 
         # Adjusting the thrust based on key press
-        if key[K_UP]:
+        if key==0:
             thruster_left += self.thruster_amplitude
             thruster_right += self.thruster_amplitude
-        if key[K_DOWN]:
+        if key==1:
             thruster_left -= self.thruster_amplitude
             thruster_right -= self.thruster_amplitude
-        if key[K_LEFT]:
+        if key==2:
             thruster_left -= self.diff_amplitude
-        if key[K_RIGHT]:
+        if key==3:
             thruster_right -= self.diff_amplitude
         
         total_thrust = thruster_left + thruster_right
@@ -119,7 +119,8 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
     drone_group = pygame.sprite.Group()
-    drone = Drone(100, int(HEIGHT/2), WIDTH, HEIGHT)
+    image = pygame.image.load(DRONE_IMAGE).convert_alpha()
+    drone = Drone(100, int(HEIGHT/2), WIDTH, HEIGHT, image)
     drone_group.add(drone)
 
     # Game loop
@@ -134,12 +135,12 @@ def main():
         drone.update()
 
         # rotate drone sprite according to the current calculation of the rotation
-        player_copy = pygame.transform.rotate(drone.image, drone.angle)
+        agent_copy = pygame.transform.rotate(drone.image, drone.angle)
         screen.blit(
-            player_copy,
+            agent_copy,
             (
-                drone.rect.x - int(player_copy.get_width() / 2),
-                drone.rect.y - int(player_copy.get_height() / 2),
+                drone.rect.x,
+                drone.rect.y,
             ),
         )
 

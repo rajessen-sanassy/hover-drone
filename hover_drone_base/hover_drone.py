@@ -3,21 +3,23 @@ from pygame.locals import *
 from pygame.sprite import *
 import random
 import os
+from math import sin, cos, pi
 
 BASE_PATH = os.path.realpath("./hover_drone_gym/assets")
-DRONE_IMAGE = os.path.join(BASE_PATH, 'drone.png')
+DRONE_IMAGE1 = os.path.join(BASE_PATH, 'drone_1.png')
+DRONE_IMAGE2 = os.path.join(BASE_PATH, 'drone_2.png')
 BUILDING_IMAGE = os.path.join(BASE_PATH, 'building.png')
 BG_IMAGE = os.path.join(BASE_PATH, 'background.png')
 SCREEN_HEIGHT = 500
 SCREEN_WIDTH = 800
-BUILDING_GAP = 60
-SPAWN_RATE_SECONDS = 2
+BUILDING_GAP = 80
+SPAWN_RATE_SECONDS = 4
 FPS = 60
 
 class Drone(pygame.sprite.Sprite):
-    def __init__(self,x,y):
+    def __init__(self, x, y, screen_width, screen_height):
         pygame.sprite.Sprite.__init__(self) 
-        self.image = pygame.image.load(DRONE_IMAGE).convert_alpha()
+        self.image = pygame.image.load(DRONE_IMAGE1).convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.center = [x,y]
         self.velocity_x = 0
@@ -26,31 +28,86 @@ class Drone(pygame.sprite.Sprite):
         self.screen_width = SCREEN_WIDTH
         self.screen_height = SCREEN_HEIGHT
 
+        # physics
+        # gravity
+        self.gravity = 0.08
+
+        # initialize angular movements
+        self.angle = 0
+        self.angular_speed = 0
+        self.angular_acceleration = 0
+
+        # initialize velocities and accelerations
+        self.velocity_x = 0
+        self.acceleration_x = 0
+        self.velocity_y = 0
+        self.acceleration_y = 0
+
+        # propeller thrust to be added upon button presses
+        self.thruster_amplitude = 0.04
+
+        # rate of rotation upon button presses
+        self.diff_amplitude = 0.003
+
+        # Default propeller force
+        self.thruster_default = 0.04
+
+        self.mass = 1
+
+        # Length from center of mass to propeller
+        self.arm = 25
+
     def kia(self):
         self.is_alive = False
 
-    def action(self, key):
-        #Resetting velocities
-        self.velocity_x = 0
-        self.velocity_y = 0
+    def reset(self):
+        self.acceleration_x = 0
+        self.acceleration_y = self.gravity
+        self.angular_acceleration = 0
 
-        #Adjusting the velocities 
+    def action(self, key):
+        # Resetting values
+        self.reset()
+        thruster_left = self.thruster_default
+        thruster_right = self.thruster_default
+
+        # Adjusting the thrust based on key press
         if key[pygame.K_UP]:
-            self.velocity_y = -10
+            thruster_left += self.thruster_amplitude
+            thruster_right += self.thruster_amplitude
         if key[pygame.K_DOWN]:
-            self.velocity_y = 10
+            thruster_left -= self.thruster_amplitude
+            thruster_right -= self.thruster_amplitude
         if key[pygame.K_LEFT]:
-            self.velocity_x = -10
+            thruster_left -= self.diff_amplitude
         if key[pygame.K_RIGHT]:
-            self.velocity_x = 10
+            thruster_right -= self.diff_amplitude
+        
+        total_thrust = thruster_left + thruster_right
+        angle_radian = self.angle * pi / 180
+
+        # calculate x y acceleration based on angle
+        self.acceleration_x += (-(total_thrust) * sin(angle_radian) / self.mass)
+        self.acceleration_y += (-(total_thrust) * cos(angle_radian) / self.mass)
+
+        # negative = right rotation in pygame
+        self.angular_acceleration += self.arm * (thruster_right - thruster_left) / self.mass
+
+        # update velocities
+        self.velocity_x += self.acceleration_x
+        self.velocity_y += self.acceleration_y
+        self.angular_speed += self.angular_acceleration
 
     def update(self):
         if(not self.is_alive):
             return
         
-        #updating the velocities 
+        pygame.transform.rotate(self.image, self.angle)
+
+        #updating the positions 
         self.rect.x += self.velocity_x
         self.rect.y += self.velocity_y
+        self.angle += self.angular_speed
 
         #make it stay on the screen and not move off
         if self.rect.left < 0:
@@ -68,6 +125,7 @@ class Building(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(BUILDING_IMAGE).convert_alpha()
         self.rect = self.image.get_rect()
+        self.pos = position
         self.passed = False
         self.building_gap = building_gap
 
@@ -78,7 +136,7 @@ class Building(pygame.sprite.Sprite):
             self.rect.topleft = [x,y + self.building_gap]
     
     def evaluate(self, x):
-        if(x > self.rect.x and not self.passed):
+        if(x > self.rect.bottomright[0] and not self.passed):
             self.passed = True
             return True
         return False
@@ -87,7 +145,7 @@ class Building(pygame.sprite.Sprite):
         return self.rect.x - x
 
     def update(self):
-        self.rect.x -= 4
+        self.rect.x -= 2
         if self.rect.right < 0:
             self.kill()
 
@@ -109,16 +167,27 @@ class HoverDrone():
         self.building_gap = BUILDING_GAP
         self.prev_building = pygame.time.get_ticks()
         self.drone_group = pygame.sprite.Group()
-        self.drone = Drone(100, int(self.screen_height/2))
+        self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height)
         self.drone_group.add(self.drone)
         self.building_group = pygame.sprite.Group()
 
+    def has_moved(self):
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and not self.moving and not self.gameover:
+                if event.key in [pygame.K_DOWN, pygame.K_UP, pygame.K_RIGHT, pygame.K_LEFT]:
+                    return True
+
     def action(self):
-        key = pygame.key.get_pressed()
-        
-        self.drone.action(key)
-        self.drone.update()
-        self.check_collision()
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and not self.moving and not self.gameover:
+                if event.key in [pygame.K_DOWN, pygame.K_UP, pygame.K_RIGHT, pygame.K_LEFT]:
+                    self.moving = True
+    
+        if (self.moving):
+            key = pygame.key.get_pressed()
+            self.drone.action(key)
+            self.drone.update()
+            self.check_collision()
 
     def evaluate(self):
         reward = 0
@@ -127,17 +196,10 @@ class HoverDrone():
                 reward += 0.5
         return reward
 
-    def view(self, score):
-        for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN and self.moving == False and self.gameover == False:
-                    if event.key in [pygame.K_DOWN, pygame.K_UP, pygame.K_RIGHT, pygame.K_LEFT]:
-                        self.moving = True
-
+    def view(self, score, step):
         self.screen.blit(self.background,(0,0))
-        
-        self.action()
-        self.drone_group.draw(self.screen)
-        
+        self.safe_zone()
+        # self.drone_group.draw(self.screen)
 
         if self.gameover == False and self.moving == True:
             #creating upper and lower buildings
@@ -156,6 +218,18 @@ class HoverDrone():
         text_rect = text.get_rect()
         text_rect.center = (self.screen_width/2, 20)
         self.screen.blit(text, text_rect)
+
+        #update drone
+        images = [pygame.image.load(DRONE_IMAGE1).convert_alpha(), pygame.image.load(DRONE_IMAGE2).convert_alpha()]
+        player_sprite = images[int(step * 0.3) % 2]
+        player_copy = pygame.transform.rotate(player_sprite, self.drone.angle)
+        self.screen.blit(
+            player_copy,
+            (
+                self.drone.rect.x,
+                self.drone.rect.y + 30,
+            ),
+        )
 
         pygame.display.update()
         self.clock.tick(self.game_speed)
@@ -176,15 +250,62 @@ class HoverDrone():
                 self.drone.kia()
                 return True
 
+        if(self.drone.rect.y >= self.screen_height-self.drone.image.get_height()):
+            return True
+        return False
+
+    def safe_zone(self):
+        min_horizontal_dis = float('inf')
+        building_1 = None
+        building_2 = None
+
+        if len(self.building_group) == 0: # return if there are no buildings
+            return
+
+        all_buildings_passed = True
+
+        for building in self.building_group:
+            if building.passed: # if the drone is already passed the building, we ignore it
+                continue
+            
+            all_buildings_passed = False
+
+            dis = building.horizontal_dis(self.drone.rect.x)
+
+            if dis < min_horizontal_dis:
+                min_horizontal_dis = dis
+                building_1 = building
+
+        if all_buildings_passed:
+            return
+
+        for building in self.building_group:
+            if building.rect.x == building_1.rect.x and building.pos == (building_1.pos * -1):
+                building_2 = building
+
+        if building_1.rect.y < building_2.rect.y:
+            safe_zone_top_left = [0, building_1.rect.bottomleft[1]]
+            safe_zone_bottom_right = building_2.rect.topright
+        else:
+            safe_zone_top_left = [0, building_2.rect.bottomleft[1]]
+            safe_zone_bottom_right = building_1.rect.topright
+        # rectangle_color = (0, 255, 0)
+        # pygame.draw.rect(self.screen, rectangle_color, (safe_zone_top_left[0], safe_zone_top_left[1], width, height))
+        return safe_zone_top_left, safe_zone_bottom_right
+
     def start(self):
         score = 0
-        
+        step = 0
         while True:
+            step += 1
+            # if(not self.moving):
+            #     self.moving = self.has_moved()
+    
             if self.check_collision():
                 self.reset()
-
             score += self.evaluate()
-            self.view(score)
+            self.view(score, step)
+            self.action()
 
     def reset(self):
         self.drone.kill()
@@ -193,7 +314,7 @@ class HoverDrone():
 
         self.prev_building = pygame.time.get_ticks()
         
-        self.drone = Drone(100, int(self.screen_height/2))
+        self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height)
         self.drone_group.add(self.drone)
 
         self.moving = False

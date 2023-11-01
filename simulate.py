@@ -23,7 +23,6 @@ def _get_args():
 def random_agent_env():
     env = gym.make("hover_drone_gym/HoverDrone-v0")
     env.reset()
-    score = 0
     while True:
         env.render()
 
@@ -33,18 +32,15 @@ def random_agent_env():
         # processing:
         obs, reward, done, _, info = env.step(action)
 
-        score += reward
         print(f"Obs: {obs}\n"
               f"Action: {action}\n"
-              f"Score: {score}\n"
+              f"Reward: {reward}\n"
               f"Done: {done}\n"
               f"Info: {info}\n")
 
-        time.sleep(1 / 30)
+        time.sleep(1/60)
 
         if done:
-            time.sleep(1)
-            score = 0
             env.reset()
 
 def main():
