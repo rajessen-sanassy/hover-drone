@@ -1,7 +1,7 @@
 import argparse
 import time
 import gym
-import hover_drone_base.hover_drone as hover_drone
+import hover_drone_base.game as game
 import hover_drone_gym
 
 def _get_args():
@@ -47,7 +47,7 @@ def main():
     args = _get_args()
 
     if args.mode == "human":
-        hover_drone.main()
+        game.main()
     elif args.mode == "random":
         random_agent_env()
     else:

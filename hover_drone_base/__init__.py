@@ -1,1 +1,1 @@
-from hover_drone_base.hover_drone import HoverDrone
+from hover_drone_base.game import Game

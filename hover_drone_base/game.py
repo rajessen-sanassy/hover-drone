@@ -101,11 +101,9 @@ class Drone(pygame.sprite.Sprite):
     def update(self):
         if(not self.is_alive):
             return
-        
-        pygame.transform.rotate(self.image, self.angle)
 
-        #updating the positions 
-        self.rect.x += self.velocity_x
+        # #updating the positions 
+        # self.rect.x += self.velocity_x
         self.rect.y += self.velocity_y
         self.angle += self.angular_speed
 
@@ -144,13 +142,8 @@ class Building(pygame.sprite.Sprite):
     def horizontal_dis(self, x):
         return self.rect.x - x
 
-    def update(self):
-        self.rect.x -= 2
-        if self.rect.right < 0:
-            self.kill()
 
-
-class HoverDrone():
+class Game():
     def __init__(self):
         pygame.init()
         self.screen_height = SCREEN_HEIGHT
@@ -159,13 +152,13 @@ class HoverDrone():
         self.background = pygame.image.load(BG_IMAGE)
         self.clock = pygame.time.Clock()
         pygame.display.set_caption('Hover Drone')
-        self.font = pygame.font.SysFont("Arial", 30)
+        self.font = pygame.font.Font('hover_drone_gym/assets/custom_font.ttf', 30)
         self.game_speed = FPS
         self.moving = False
         self.gameover = False
-        self.recurr_buildings = SPAWN_RATE_SECONDS*1e3
+        self.recurr_buildings = 400
         self.building_gap = BUILDING_GAP
-        self.prev_building = pygame.time.get_ticks()
+        self.prev_building = None
         self.drone_group = pygame.sprite.Group()
         self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height)
         self.drone_group.add(self.drone)
@@ -190,11 +183,11 @@ class HoverDrone():
             self.check_collision()
 
     def evaluate(self):
-        reward = 0
+        score = 0
         for building in self.building_group:
             if building.evaluate(self.drone.rect.x):
-                reward += 0.5
-        return reward
+                score += 0.5
+        return int(score)
 
     def view(self, score, step):
         self.screen.blit(self.background,(0,0))
@@ -203,15 +196,20 @@ class HoverDrone():
 
         if self.gameover == False and self.moving == True:
             #creating upper and lower buildings
-            curr_time = pygame.time.get_ticks()
-            if curr_time - self.prev_building > self.recurr_buildings:
-                self.create_building()
-                self.prev_building = curr_time
+            if not self.prev_building or self.prev_building.rect.x < (self.screen_width - self.recurr_buildings):
+                self.prev_building = self.create_building()
         
             #move buidling
-            self.building_group.update()
-        #draw buidling
-        self.building_group.draw(self.screen)
+            for building in self.building_group:
+                building_speed = max(int(self.drone.velocity_x), 0)
+                building.rect.x -= building_speed
+                if building.rect.right < 0:
+                    building.kill()
+                #draw buidling
+                self.screen.blit(building.image, (building.rect.x, building.rect.y))
+            
+        # #draw buidling
+        # self.building_group.draw(self.screen)
 
         # score
         text = self.font.render(f"Score: {score}", True, (255, 0, 0))
@@ -226,7 +224,7 @@ class HoverDrone():
         self.screen.blit(
             player_copy,
             (
-                self.drone.rect.x,
+                100,
                 self.drone.rect.y + 30,
             ),
         )
@@ -242,7 +240,7 @@ class HoverDrone():
         upper_building = Building(self.screen_width,int(self.screen_height/2) + building_height, 1, self.building_gap)
         self.building_group.add(lower_building)
         self.building_group.add(upper_building)
-        
+        return lower_building # keep track of last building
 
     def check_collision(self):
         if pygame.sprite.groupcollide(self.drone_group,self.building_group, False, False) or self.drone.rect.top < 0:
@@ -312,7 +310,7 @@ class HoverDrone():
         self.building_group.empty()
         self.drone_group.empty()
 
-        self.prev_building = pygame.time.get_ticks()
+        self.prev_building = None
         
         self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height)
         self.drone_group.add(self.drone)
@@ -323,7 +321,7 @@ class HoverDrone():
         self.start()
 
 def main():
-    game = HoverDrone()
+    game = Game()
     game.start()
 
 if __name__ == '__main__':

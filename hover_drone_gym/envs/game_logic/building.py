@@ -26,8 +26,3 @@ class Building(pygame.sprite.Sprite):
     
     def horizontal_dis(self, x):
         return self.rect.x - x
-
-    def update(self):
-        self.rect.x -= 2
-        if self.rect.right < 0:
-            self.kill()

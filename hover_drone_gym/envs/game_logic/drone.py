@@ -94,10 +94,10 @@ class Drone(pygame.sprite.Sprite):
         if(not self.is_alive):
             return
         
-        pygame.transform.rotate(self.image, self.angle)
+        # pygame.transform.rotate(self.image, self.angle)
 
         #updating the positions 
-        self.rect.x += self.velocity_x
+        # self.rect.x += self.velocity_x
         self.rect.y += self.velocity_y
         self.angle += self.angular_speed
 

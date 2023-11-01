@@ -7,7 +7,7 @@ from hover_drone_gym.envs.game_logic.drone import Drone
 from hover_drone_gym.envs.game_logic.building import Building
 from math import tan
 
-class HoverDrone:
+class Game:
     def __init__(self, screen_size, building_gap, spawn_rate, FPS):
         pygame.init()
         self.screen_width = screen_size[0]
@@ -15,7 +15,7 @@ class HoverDrone:
         self.screen = pygame.display.set_mode((self.screen_width,self.screen_height))
         self.clock = pygame.time.Clock()
         pygame.display.set_caption('Hover Drone')
-        self.font = pygame.font.SysFont("Arial", 30)
+        self.font = pygame.font.SysFont('hover_drone_gym/assets/custom_font.ttf', 30)
         images = load_images()
         self.background = images["background"]
         self.drone_image = images["drone_1"]
@@ -24,9 +24,9 @@ class HoverDrone:
         self.game_speed = FPS
         self.moving = False
         self.gameover = False
-        self.recurr_buildings = spawn_rate*1e3
+        self.recurr_buildings = spawn_rate
         self.building_gap = building_gap
-        self.prev_building = pygame.time.get_ticks()
+        self.prev_building = None
         self.drone_group = pygame.sprite.Group()                                       
         self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height, self.drone_image)
         self.drone_group.add(self.drone)
@@ -157,29 +157,39 @@ class HoverDrone:
         
         # drone is above safe zone
         return safe_zone_topleft[1] - self.drone.rect.y
+    
+    def x_distance_from_building(self):
+        if len(self.building_group) == 0: # return if there are no buildings
+            return 0
+        return self.nearest_building()[0]
         
-
     def evaluate(self):
         score = 0
         for building in self.building_group:
             if building.evaluate(self.drone.rect.x):
                 score += 0.5
-        return score
+        return int(score)
 
     def view(self):
         self.screen.blit(self.background,(0,0))
         
         if self.gameover == False and self.moving == True:
             #creating upper and lower buildings
-            curr_time = pygame.time.get_ticks()
-            if curr_time - self.prev_building > self.recurr_buildings:
-                self.create_building()
-                self.prev_building = curr_time
+            #creating upper and lower buildings
+            if not self.prev_building or self.prev_building.rect.x < (self.screen_width - self.recurr_buildings):
+                self.prev_building = self.create_building()
+            
             #move buidling
-            self.building_group.update()
-        
-        #draw buidling
-        self.building_group.draw(self.screen)
+            for building in self.building_group:
+                building_speed = max(int(self.drone.velocity_x), 0)
+                building.rect.x -= building_speed
+                if building.rect.right < 0:
+                    building.kill()
+                #draw buidling
+                self.screen.blit(building.image, (building.rect.x, building.rect.y))
+            
+        # #draw buidling
+        # self.building_group.draw(self.screen)
 
         # score
         text = self.font.render(f"Score: {self.score}", True, (255, 0, 0))
@@ -198,8 +208,8 @@ class HoverDrone:
         self.screen.blit(
             player_copy,
             (
-                self.drone.rect.x,
-                self.drone.rect.y,
+                100,
+                self.drone.rect.y + 30,
             ),
         )
 
@@ -214,6 +224,7 @@ class HoverDrone:
         upper_building = Building(self.screen_width,int(self.screen_height/2) + building_height, 1, self.building_gap, self.building_image)
         self.building_group.add(lower_building)
         self.building_group.add(upper_building)
+        return lower_building
         
 
     def check_collision(self):
@@ -234,10 +245,10 @@ class HoverDrone:
         self.building_group.empty()
         self.drone_group.empty()
 
-        self.prev_building = pygame.time.get_ticks()
+        self.prev_building = None
         
         self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height, self.drone_image)
         self.drone_group.add(self.drone)
-
+        
         self.moving = False
         self.gameover = False
