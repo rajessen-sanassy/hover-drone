@@ -9,7 +9,7 @@ class HoverDroneEnv(gym.Env):
     def __init__(self,
                 screen_size=(800, 500),
                 _building_gap=120,
-                _spawn_rate=6,
+                _spawn_rate=4,
                 _FPS=60,
                 ):
         
@@ -26,27 +26,47 @@ class HoverDroneEnv(gym.Env):
         self._game = None
 
     def _get_obs(self):
-        return np.array([
-            self._game.nearest_building()[0],
-            self._game.nearest_building()[1],
-        ])
+        return [
+            self._game.get_velocity_vector(),
+            self._game.y_distance_from_safe_zone(),
+            self._game.get_angle_to_target(),
+            self._game.get_angle(),
+            self._game.get_angle_velocity(),
+            self._game.get_velocity_angle_to_target()
+        ]
 
     def _get_info(self):
         return dict({"score": self._game.score})
     
     def step(self, action):
-        alive = not self._game.update_state(int(action))
+        reward = 0
+        dead = self._game.update_state(int(action))
         obs = self._get_obs()
-        reward = self._game.score + 0.000001
 
-        terminated = not alive
+        # reward structure
+        # staying alive (+1 per 60 frames)
+        reward += 1/self.FPS
+
+        # passing obstacle (+10)
+        score = self._game.evaluate()
+        self._game.score += score
+        if(score):
+            reward += 10
+
+        #not within safe zone (-distance from the safe zone)
+        reward -= abs(self._game.y_distance_from_safe_zone())       
+
+        #agent dies (-1000 game is over)
+        if dead:
+            reward -= 1000
+
+        terminated = dead
         truncated = False
         info = {"score": self._game.score}
-
+        self.render()
         return obs, reward, terminated, truncated, info
     
-    def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+    def reset(self):
         self._game = HoverDrone(self._screen_size, self._building_gap, self._spawn_rate, self.FPS)
         self._game.reset()
 

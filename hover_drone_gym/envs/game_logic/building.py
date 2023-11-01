@@ -4,9 +4,9 @@ from pygame.sprite import *
 
 #creating buildings 
 class Building(pygame.sprite.Sprite):
-    def __init__(self,x,y,position, building_gap, images):
+    def __init__(self,x,y,position, building_gap, building_image):
         pygame.sprite.Sprite.__init__(self)
-        self.image = images["building"]
+        self.image = building_image
         self.rect = self.image.get_rect()
         self.passed = False
         self.pos = position
@@ -19,7 +19,7 @@ class Building(pygame.sprite.Sprite):
             self.rect.topleft = [x,y + self.building_gap]
     
     def evaluate(self, x):
-        if(x > self.rect.x and not self.passed):
+        if(x > self.rect.bottomright[0] and not self.passed):
             self.passed = True
             return True
         return False
@@ -28,6 +28,6 @@ class Building(pygame.sprite.Sprite):
         return self.rect.x - x
 
     def update(self):
-        self.rect.x -= 4
+        self.rect.x -= 2
         if self.rect.right < 0:
             self.kill()
