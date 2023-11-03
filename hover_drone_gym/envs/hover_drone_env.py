@@ -34,6 +34,14 @@ class HoverDroneEnv(gym.Env):
             self._game.get_angle_velocity(),
             self._game.get_velocity_angle_to_target()
         ]
+        return [
+            self._game.get_velocity_vector(),
+            self._game.y_distance_from_safe_zone(),
+            self._game.get_angle_to_target(),
+            self._game.get_angle(),
+            self._game.get_angle_velocity(),
+            self._game.get_velocity_angle_to_target()
+        ]
 
     def _get_info(self):
         return dict({"score": self._game.score})

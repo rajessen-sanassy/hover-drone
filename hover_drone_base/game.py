@@ -287,6 +287,10 @@ class Game():
         else:
             safe_zone_top_left = [0, building_2.rect.bottomleft[1]]
             safe_zone_bottom_right = building_1.rect.topright
+        
+        width = safe_zone_bottom_right[0]
+        height = safe_zone_top_left[1] - safe_zone_bottom_right[1]
+
         # rectangle_color = (0, 255, 0)
         # pygame.draw.rect(self.screen, rectangle_color, (safe_zone_top_left[0], safe_zone_top_left[1], width, height))
         return safe_zone_top_left, safe_zone_bottom_right
