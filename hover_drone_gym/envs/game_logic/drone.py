@@ -77,6 +77,8 @@ class Drone(pygame.sprite.Sprite):
             thruster_left -= self.diff_amplitude
         if key==3:
             thruster_right -= self.diff_amplitude
+        # else:
+
         
         total_thrust = thruster_left + thruster_right
         angle_radian = self.angle * pi / 180

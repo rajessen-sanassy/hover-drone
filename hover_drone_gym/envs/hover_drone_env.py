@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 from gym import spaces
 import numpy as np
 from hover_drone_gym.envs.game_logic.game import Game
@@ -13,10 +13,11 @@ class HoverDroneEnv(gym.Env):
                 _time_limit=1000
                 ):
         
-        self.action_space = spaces.Discrete(4)
-        self.observation_space = spaces.Box(-np.inf, np.inf,
-                                                shape=(2,),
-                                                dtype=np.float64)
+        # super(HoverDroneEnv, self).init()
+
+        self.action_space = gym.spaces.Discrete(4)
+        self.observation_space = gym.spaces.Box(-np.inf, np.inf,
+                                                shape=(1,))
         self._screen_size = screen_size
         self._building_gap = _building_gap
         self._spawn_distance = _spawn_distance
@@ -26,14 +27,14 @@ class HoverDroneEnv(gym.Env):
         self._game = None
 
     def _get_obs(self):
-        return [
-            self._game.get_velocity_vector(),
+        return np.array([
+            # self._game.get_velocity_vector(),
             self._game.y_distance_from_safe_zone(),
-            self._game.get_angle_to_target(),
-            self._game.get_angle(),
-            self._game.get_angle_velocity(),
-            self._game.get_velocity_angle_to_target()
-        ]
+            # self._game.get_angle_to_target(),
+            # self._game.get_angle(),
+            # self._game.get_angle_velocity(),
+            # self._game.get_velocity_angle_to_target()
+        ]).astype(np.float32)
 
     def _get_info(self):
         return dict({"score": self._game.score})
@@ -74,7 +75,8 @@ class HoverDroneEnv(gym.Env):
         
         return obs, reward, terminated, truncated, info
     
-    def reset(self):
+    def reset(self, seed=None):
+        super().reset(seed=seed)
         self._game = Game(self._screen_size, self._building_gap, self._spawn_distance, self._FPS)
         self._game.reset()
 

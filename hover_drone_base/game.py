@@ -4,6 +4,7 @@ from pygame.sprite import *
 import random
 import os
 from math import sin, cos, pi
+import numpy as np
 
 BASE_PATH = os.path.realpath("./hover_drone_gym/assets")
 DRONE_IMAGE1 = os.path.join(BASE_PATH, 'drone_1.png')
@@ -65,23 +66,56 @@ class Drone(pygame.sprite.Sprite):
         self.acceleration_y = self.gravity
         self.angular_acceleration = 0
 
+    # Rigid body with 2 thrust points
+    # The rigid body is shaped like a beam
+    # The thrust is directed perpindicular to the beam
+    # Two thrust values from -1 to 1 which correlate to the thrusts of each of the 2 thrust points
+    # The direction of these thrust values indicates which direction perpindicular to the beam the thrust is going
+    # The magnitude of the thrust values correlates to how much thrust is being applied from 0-100%
+    def action2(self, thrusts: np.array):
+        # constant values
+        thrust_value = 1
+        air_resistance = 1
+        angular_resistance = 1
+
+        # both thrusters are pointing the same direction
+        total_thrust = np.sum(thrusts)
+
+        # caclulate thrust direction based on angle
+        x_thrust = -(total_thrust * sin(self.angle)) * thrust_value / self.mass
+        y_thrust = -(total_thrust * cos(self.angle)) * thrust_value / self.mass
+
+        # calculate angular change based on difference of thrusts
+        angle_acc = self.arm * (thrusts[0] - thrusts[1]) * self.arm * thrust_value / self.mass
+
+        x_thrust -= self.velocity_x**2 * self.velocity_x * air_resistance / abs(self.velocity_x)
+        y_thrust -= self.velocity_y**2 * self.velocity_y * air_resistance / abs(self.velocity_y)
+        angle_acc -= self.angular_speed**2 * self.angular_speed * angular_resistance / abs(self.angular_speed)
+
+        self.velocity_x += self.acceleration_x / FPS
+        self.velocity_y += self.acceleration_y / FPS
+        self.angular_speed += angle_acc / FPS
+
     def action(self, key):
         # Resetting values
         self.reset()
         thruster_left = self.thruster_default
         thruster_right = self.thruster_default
-
         # Adjusting the thrust based on key press
         if key[pygame.K_UP]:
             thruster_left += self.thruster_amplitude
             thruster_right += self.thruster_amplitude
-        if key[pygame.K_DOWN]:
+        elif key[pygame.K_DOWN]:
             thruster_left -= self.thruster_amplitude
             thruster_right -= self.thruster_amplitude
-        if key[pygame.K_LEFT]:
+        elif key[pygame.K_LEFT]:
             thruster_left -= self.diff_amplitude
-        if key[pygame.K_RIGHT]:
+        elif key[pygame.K_RIGHT]:
             thruster_right -= self.diff_amplitude
+        else:
+            self.velocity_x /= 1.01
+            self.velocity_y /= 1.05
+            self.angle /= 1.001
         
         total_thrust = thruster_left + thruster_right
         angle_radian = self.angle * pi / 180
