@@ -1,1 +1,0 @@
-from hover_drone_base.game import Game

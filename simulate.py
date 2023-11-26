@@ -1,8 +1,6 @@
 import argparse
 import time
-import gym
-import hover_drone_base.game as game
-import hover_drone_gym
+from hover_drone_gym import HoverDroneEnv
 
 def _get_args():
     """ Parses the command line arguments and returns them. """
@@ -19,9 +17,8 @@ def _get_args():
 
     return parser.parse_args()
 
-
-def random_agent_env():
-    env = gym.make("hover_drone_gym/HoverDrone-v0")
+def run_env(env):
+    env = HoverDroneEnv()
     env.reset()
     while True:
         env.render()
@@ -47,9 +44,10 @@ def main():
     args = _get_args()
 
     if args.mode == "human":
-        game.main()
+        env = HoverDroneEnv()
+        env.run_human()
     elif args.mode == "random":
-        random_agent_env()
+        run_env()
     else:
         print("Invalid mode!")
 

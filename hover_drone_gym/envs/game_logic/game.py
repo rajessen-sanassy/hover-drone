@@ -5,9 +5,10 @@ from pygame.sprite import *
 import random
 from hover_drone_gym.envs.game_logic.drone import Drone
 from hover_drone_gym.envs.game_logic.building import Building
-from math import tan
+from math import sqrt, cos, sin, pi, pow
+import numpy as np
 
-class Game:
+class Game():
     def __init__(self, screen_size, building_gap, spawn_rate, FPS):
         pygame.init()
         self.screen_width = screen_size[0]
@@ -26,170 +27,130 @@ class Game:
         self.gameover = False
         self.recurr_buildings = spawn_rate
         self.building_gap = building_gap
-        self.prev_building = None
-        self.drone_group = pygame.sprite.Group()                                       
+        self.prev_building = None                            
         self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height, self.drone_image)
-        self.drone_group.add(self.drone)
-        self.building_group = pygame.sprite.Group()
+        self.building_group = []
         self.score = 0
         self.step = 0
+        self.radars = [(0,0) * 5]
 
-    def get_velocity_vector(self):
-        speed = ((self.drone.velocity_x)**2 + (self.drone.velocity_y)**2)**(1/2)
-        angle = tan(self.drone.velocity_y / (self.drone.velocity_x + 0.00001))
+    def get_raycast(self):
+        return np.array([raycast[1] for raycast in self.radars])
 
-        return speed, angle
+    def get_velocity(self):
+        velocity = sqrt(self.drone.velocity_x**2 + self.drone.velocity_y**2)
 
-    # angle_to_up
+        return velocity
+
     def get_angle(self): return self.drone.angle
 
-    def get_angle_to_target(self):
-        # TODO: ASK JOSH ABOUT ANGLES, WHERE IS 0, CLOCKWISE OR COUNTERCLOCKWISE, RADIANS OR DEGREES
-        dis_to_target = self.y_distance_from_safe_zone()
+    def get_angle_velocity(self): return self.drone.angular_speed
 
-        # if below safe zone, angle to target is 0 (also 0 if drone is inside safe zone)
-        if dis_to_target <= 0:
-            angle_to_target = 0
-        # if above safe zone, angle to target is 180
-        else:
-            angle_to_target = 180
+    def check_building_intercept(self, x, y):
+        for buildings in self.building_group:
+            for building in buildings:
+                if building.intercept(x, y):
+                    return True
+        return False
 
-        return abs(angle_to_target - self.drone.angle)
+    def check_radar(self, degree):
+        length = 0
+        center = [self.drone.rect.center[0], self.drone.rect.center[1]-18]
+        angle_radian = degree * pi / 180
+        x = int(center[0] + cos(angle_radian) * length)
+        y = int(center[1] + sin(angle_radian) * length)
 
-    # TODO: Not needed?
-    def get_angle_velocity(self):
-        return self.get_velocity_vector()[1]
+        while not self.check_building_intercept(x, y) and length < (self.screen_width - self.drone.rect.x):
+            length = length + 1
+            x = int(center[0] + cos(angle_radian) * length)
+            y = int(center[1] + sin(angle_radian) * length)
 
-    # angle_target_and_velocity
-    def get_velocity_angle_to_target(self):
-        dis_to_target = self.y_distance_from_safe_zone()
+        # Calculate Distance To Border And Append To Radars List
+        dist = int(sqrt(pow(x - center[0], 2) + pow(y - center[1], 2)))
+        self.radars.append([(x, y), dist])
 
-        # if below safe zone, angle to target is 0 (also 0 if drone is inside safe zone)
-        if dis_to_target <= 0:
-            angle_to_target = 0
-        # if above safe zone, angle to target is 180
-        else:
-            angle_to_target = 180
+    def check_collisions(self):
+        # check building collision
+        for buildings in self.building_group:
+            for building in buildings:
+                building_lines = building.get_rect_lines()
+                if self.check_hitbox(building_lines):
+                    self.drone.kia()
+                    return True
 
-        return abs(angle_to_target - self.get_velocity_vector()[1])
+        # check ground collision
+        floor_line = [((0, self.screen_height), (self.screen_width, self.screen_height)) * 4]
+        if self.check_hitbox(floor_line):
+            self.drone.kia()
+            return True
+
+        return False
+    
+    def check_hitbox(self, building_lines):
+        drone_lines = self.drone.get_rect_lines()
+
+        for line1 in drone_lines:
+            for line2 in building_lines:
+                if self.are_lines_intersecting(line1, line2):
+                    return True
+        return False
+    
+    def are_lines_intersecting(self, line1, line2):
+        x1, y1 = line1[0]
+        x2, y2 = line1[1]
+        x3, y3 = line2[0]
+        x4, y4 = line2[1]
+
+        den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+        if den == 0:
+            return False  # Lines are parallel or coincident
+
+        ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den
+        ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den
+
+        return 0 <= ua <= 1 and 0 <= ub <= 1
+
 
     def update_state(self, action):
         self.moving = True      
         self.drone.action(action)
         self.drone.update()
-        return self.check_collision()
+        self.evaluate()
 
-    def nearest_building(self):
-        min_horizontal_dis = float('inf')
-        dis = 0
-        rectX = 0
-        pos = 0
-        y1 = 0
-        y2 = 0
+        self.radars.clear()
+        degrees = [-90, -45, -30, -15, 0, 15, 30, 45, 90]
+        for degree in degrees:
+            self.check_radar(degree)
 
-        for building in self.building_group:
-            dis = building.horizontal_dis(self.drone.rect.x)
-            if dis >= 0 and dis < min_horizontal_dis:
-                min_horizontal_dis = dis
-                rectX = building.rect.x
-                y1 = building.rect.y
-                pos = building.pos
-
-        for x in self.building_group:
-            if x.rect.x == rectX and x.pos == (pos * -1):
-                y2 = x.rect.y
-
-        y_diff = self.drone.rect.y - (y1 + y2 / 2)
-
-        return dis, y_diff
-
-    def safe_zone(self):
-        min_horizontal_dis = float('inf')
-        building_1 = None
-        building_2 = None
-
-        if len(self.building_group) == 0: # return if there are no buildings
-            return
-
-        all_buildings_passed = True
-
-        for building in self.building_group:
-            if building.passed: # if the drone is already passed the building, we ignore it
-                continue
-            
-            all_buildings_passed = False
-
-            dis = building.horizontal_dis(self.drone.rect.x)
-
-            if dis < min_horizontal_dis:
-                min_horizontal_dis = dis
-                building_1 = building
-
-        if all_buildings_passed:
-            return
-
-        for building in self.building_group:
-            if building.rect.x == building_1.rect.x and building.pos == (building_1.pos * -1):
-                building_2 = building
-
-        if building_1.rect.y < building_2.rect.y:
-            safe_zone_top_left = [0, building_1.rect.bottomleft[1]]
-            safe_zone_bottom_right = building_2.rect.topright
-        else:
-            safe_zone_top_left = [0, building_2.rect.bottomleft[1]]
-            safe_zone_bottom_right = building_1.rect.topright
-        
-        return safe_zone_top_left, safe_zone_bottom_right
-
-
-    def y_distance_from_safe_zone(self):
-        safe_zone = self.safe_zone()
-        if safe_zone == None:
-            return 0
-        safe_zone_topleft, safe_zone_bottomright = safe_zone
-
-        if safe_zone_topleft[1] <= self.drone.rect.y:
-            if self.drone.rect.bottomright[1] <= safe_zone_bottomright[1]: # drone is in safe zone
-                return 0
-            
-            # drone is below safe zone
-            return safe_zone_bottomright[1] - self.drone.rect.bottomright[1]
-        
-        # drone is above safe zone
-        return safe_zone_topleft[1] - self.drone.rect.y
-    
-    def x_distance_from_building(self):
-        if len(self.building_group) == 0: # return if there are no buildings
-            return 0
-        return self.nearest_building()[0]
+        return self.check_collisions()
         
     def evaluate(self):
         score = 0
-        for building in self.building_group:
-            if building.evaluate(self.drone.rect.x):
-                score += 0.5
-        return int(score)
+        for buildings in self.building_group:
+            if buildings[0].evaluate(self.drone.rect.center[0]):
+                    buildings[1].is_passed = True
+                    self.score += 1
+                    score = 1
 
+        return score
+    
     def view(self):
         self.screen.blit(self.background,(0,0))
         
         if self.gameover == False and self.moving == True:
             #creating upper and lower buildings
-            #creating upper and lower buildings
             if not self.prev_building or self.prev_building.rect.x < (self.screen_width - self.recurr_buildings):
                 self.prev_building = self.create_building()
             
             #move buidling
-            for building in self.building_group:
-                building_speed = max(int(self.drone.velocity_x), 0)
-                building.rect.x -= building_speed
-                if building.rect.right < 0:
-                    building.kill()
-                #draw buidling
-                self.screen.blit(building.image, (building.rect.x, building.rect.y))
-            
-        # #draw buidling
-        # self.building_group.draw(self.screen)
+            for buildings in self.building_group:
+                for building in buildings:
+                    building_speed = max(int(self.drone.velocity_x), 0)
+                    building.rect.x -= building_speed
+                    if building.rect.right < 0:
+                        building.kill()
+                    #draw buidling
+                    self.screen.blit(building.image, (building.rect.x, building.rect.y))
 
         # score
         text = self.font.render(f"Score: {self.score}", True, (255, 0, 0))
@@ -205,13 +166,19 @@ class Game:
             player_sprite = self.drone_image2
 
         player_copy = pygame.transform.rotate(player_sprite, self.drone.angle)
-        self.screen.blit(
-            player_copy,
-            (
-                100,
-                self.drone.rect.y + 30,
-            ),
-        )
+        rotated_rect = player_copy.get_rect(center=self.drone.rect.center)
+        draw_pos = rotated_rect.topleft
+        # Blit the rotated image at the new position
+        self.screen.blit(player_copy, draw_pos)
+
+        if self.gameover == False and self.moving == True: 
+            for radar in self.radars:
+                position = radar[0]
+                pygame.draw.line(self.screen, (0, 255, 0), (self.drone.rect.center[0], self.drone.rect.center[1]-18), position, 1)
+                pygame.draw.circle(self.screen, (0, 255, 0), position, 5)
+
+        for line in self.drone.get_rect_lines():
+            pygame.draw.line(self.screen, (255, 0, 0), line[0], line[1])
 
         pygame.display.update()
         self.clock.tick(self.game_speed)
@@ -222,33 +189,37 @@ class Game:
         building_height = random.randint(height_lowerbound,height_upperbound)
         lower_building = Building(self.screen_width,int(self.screen_height/2) + building_height, -1, self.building_gap, self.building_image)
         upper_building = Building(self.screen_width,int(self.screen_height/2) + building_height, 1, self.building_gap, self.building_image)
-        self.building_group.add(lower_building)
-        self.building_group.add(upper_building)
+        self.building_group.append((lower_building, upper_building))
         return lower_building
-        
 
-    def check_collision(self):
-        if pygame.sprite.groupcollide(self.drone_group,self.building_group, False, False) or self.drone.rect.top < 0:
-                self.gameover = True
-                self.drone.kia()
-                return True
+    def action(self):
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and not self.moving and not self.gameover:
+                if event.key in [pygame.K_DOWN, pygame.K_UP, pygame.K_RIGHT, pygame.K_LEFT]:
+                    self.moving = True
 
-        if(self.drone.rect.y >= self.screen_height-self.drone.image.get_height()):
-            return True
+        if (self.moving):
+            key = pygame.key.get_pressed()
+            self.update_state(key)
 
-        return False
+    def start(self):
+        while True:    
+            if not self.drone.is_alive:
+                self.reset()
+
+            self.action()
+            self.view()
 
     def reset(self):
         self.score = 0
         self.step = 0
-        self.drone.kill()
-        self.building_group.empty()
-        self.drone_group.empty()
+        self.drone = None
+        self.building_group = []
+        self.radars = [(0,0) * 5]
 
         self.prev_building = None
         
         self.drone = Drone(100, int(self.screen_height/2), self.screen_width, self.screen_height, self.drone_image)
-        self.drone_group.add(self.drone)
         
         self.moving = False
         self.gameover = False
