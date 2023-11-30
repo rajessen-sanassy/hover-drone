@@ -23,6 +23,7 @@ class HoverDroneEnv(gym.Env):
         self._time_limit = _time_limit
         self._time = 0
         self._render_frames = render
+        self._last_score = 0
         self._continuous = continuous
         self._visualize = visualize
         self._game = None
@@ -58,11 +59,13 @@ class HoverDroneEnv(gym.Env):
 
         # staying alive 
         # (+1 per 60 frames)
-        reward += 1/self._FPS
+        if(self._game.moving):
+            reward += 1/self._FPS
 
         # Passing obstacle 
         # (+100)
-        if(self._game.evaluate()):
+        if(self._game.score > self._last_score):
+            self._last_score = self._game.score
             reward += 100    
         
         # Agent dies 
@@ -72,7 +75,7 @@ class HoverDroneEnv(gym.Env):
 
         # CASE 2 REWARD STRUCTURE
         if (case == 2):
-            reward -= self._game.get_distance_to_target() / (100 * self._FPS)
+            reward -= self._game.get_distance_to_target() / (500 * self._FPS)
         
         return reward
     
@@ -84,7 +87,7 @@ class HoverDroneEnv(gym.Env):
         reward = self._get_reward(dead, case=2)
 
         if self._render_frames:
-            self.render()
+            self.render(reward)
 
         # time exit case
         if self._time > self._time_limit:
@@ -103,13 +106,14 @@ class HoverDroneEnv(gym.Env):
                           spawn_rate=self._spawn_distance, 
                           continuous=self._continuous)
         self._game.reset()
+        self._last_score = 0
 
         if self._renderer is not None:
             self._renderer.game = self._game
 
         return self._get_obs(), self._get_info()
 
-    def render(self):
+    def render(self, reward=None):
         if self._renderer is None:
             self._renderer = Display(screen_size=self._screen_size,
                                      FPS=self._FPS,
@@ -117,7 +121,7 @@ class HoverDroneEnv(gym.Env):
             self._renderer.game = self._game
             self._renderer.make_display()
 
-        self._renderer.draw_surface()
+        self._renderer.draw_surface(reward)
         self._renderer.update_display()
     
     def run_human(self):
@@ -126,11 +130,14 @@ class HoverDroneEnv(gym.Env):
                 "Cannot run continuous action space in human mode."
             )
         self.reset()
-
+        reward = 0
         while True:
             dead = self._game.action()
-            self.render()
+            reward += self._get_reward(dead, case=2)
+            self.render(reward)
+            
             if dead:
+                reward = 0
                 self.reset()
 
     def close(self):

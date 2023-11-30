@@ -26,7 +26,7 @@ class Display():
                         self._screen_height))
         self._images = load_images()
 
-    def draw_surface(self) -> None:
+    def draw_surface(self, reward) -> None:
         if self._game is None:
             raise ValueError("A game logic must be assigned to the display!")
         
@@ -44,6 +44,8 @@ class Display():
             self._draw_raycast()
             self._draw_target()
             self._write_metrics()
+            if(reward):
+                self._draw_reward(reward)
 
 
     def _draw_buildings(self) -> None:
@@ -96,7 +98,7 @@ class Display():
     def _write_metrics(self) -> None:
         font = pygame.font.Font(None, 18)
         text = f"""
-            distance_to_target': {self._game.get_distance_to_target()}\n\
+            distance_to_target: {self._game.get_distance_to_target()}\n\
             raycast: {self._game.get_raycast()}\n\
             velocity: {self._game.get_velocity()}\n\
             angle: {self._game.get_angle()}\n\
@@ -106,7 +108,11 @@ class Display():
         for i, l in enumerate(lines):
             self._surface.blit(font.render(l, True, (0,0,0)), [-20, 0 + 12*i])
 
-        # self.surface.blit(text, [0, self._screen_height-12])
+    def _draw_reward(self, reward) -> None:
+        font = pygame.font.Font(None, 18)
+        text = f"reward: {reward}"
+
+        self._surface.blit(font.render(text, True, (0,0,0)), [16, 80])
 
     def update_display(self):
         if self._display is None:
