@@ -10,6 +10,7 @@ BG_IMAGE = os.path.join(BASE_PATH, 'background.png')
 
 def load_images() -> Dict[str, Any]:
     images = {}
+    
     try:
         images["drone_1"] = pygame.image.load(DRONE_IMAGE1).convert_alpha()
         images["drone_2"] = pygame.image.load(DRONE_IMAGE2).convert_alpha()
@@ -18,5 +19,4 @@ def load_images() -> Dict[str, Any]:
     except FileNotFoundError as e:
         raise FileNotFoundError("Cannot find the assets folder!\n"
                                 f"pointing to directory: {e}") from e
-
     return images

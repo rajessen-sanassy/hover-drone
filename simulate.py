@@ -44,10 +44,11 @@ def main():
     args = _get_args()
 
     if args.mode == "human":
-        env = HoverDroneEnv()
+        env = HoverDroneEnv(visualize=True)
         env.run_human()
     elif args.mode == "random":
-        run_env()
+        env = HoverDroneEnv(visualize=True)
+        run_env(env)
     else:
         print("Invalid mode!")
 

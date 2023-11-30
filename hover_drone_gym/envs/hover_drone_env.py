@@ -2,6 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 from hover_drone_gym.envs.game_logic.game import Game
+from hover_drone_gym.envs.game_logic.display import Display
 
 class HoverDroneEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -12,15 +13,25 @@ class HoverDroneEnv(gym.Env):
                 _FPS=60,
                 _time_limit=1000,
                 render=True,
-                continuous=False
+                continuous=False,
+                visualize=False,
                 ):
+        self._screen_size = screen_size
+        self._building_gap = _building_gap
+        self._spawn_distance = _spawn_distance
+        self._FPS = _FPS
+        self._time_limit = _time_limit
+        self._time = 0
+        self._render_frames = render
         self._continuous = continuous
+        self._visualize = visualize
+        self._game = None
+        self._renderer = None
 
         if(self._continuous):
             self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=float)
-        else
+        else:
             self.action_space = gym.spaces.Discrete(5)
-        self.render_frames = render
         
         self.observation_space = spaces.Dict({
             'distance_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
@@ -30,17 +41,9 @@ class HoverDroneEnv(gym.Env):
             'angle_velocity': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
         })
 
-        self._screen_size = screen_size
-        self._building_gap = _building_gap
-        self._spawn_distance = _spawn_distance
-        self._FPS = _FPS
-        self._time_limit = _time_limit
-        self._time = 0
-        self._game = None
-
     def _get_obs(self):
         return {
-            'distance_to_target': self._game.distance_to_target(),
+            'distance_to_target': self._game.get_distance_to_target(),
             'raycast': self._game.get_raycast(),
             'velocity': self._game.get_velocity(),
             'angle': self._game.get_angle(),
@@ -69,7 +72,7 @@ class HoverDroneEnv(gym.Env):
 
         # CASE 2 REWARD STRUCTURE
         if (case == 2):
-            reward -= self._game.distance_to_target() / (100 * self._FPS)
+            reward -= self._game.get_distance_to_target() / (100 * self._FPS)
         
         return reward
     
@@ -80,7 +83,7 @@ class HoverDroneEnv(gym.Env):
         obs = self._get_obs()
         reward = self._get_reward(dead, case=2)
 
-        if self.render_frames:
+        if self._render_frames:
             self.render()
 
         # time exit case
@@ -95,21 +98,45 @@ class HoverDroneEnv(gym.Env):
     
     def reset(self, seed=None):
         super().reset(seed=seed)
-        self._game = Game(self._screen_size, self._building_gap, self._spawn_distance, self._FPS, self._continuous)
+        self._game = Game(screen_size=self._screen_size, 
+                          building_gap=self._building_gap, 
+                          spawn_rate=self._spawn_distance, 
+                          continuous=self._continuous)
         self._game.reset()
+
+        if self._renderer is not None:
+            self._renderer.game = self._game
 
         return self._get_obs(), self._get_info()
 
     def render(self):
-        self._game.view()
+        if self._renderer is None:
+            self._renderer = Display(screen_size=self._screen_size,
+                                     FPS=self._FPS,
+                                     visualize=self._visualize)
+            self._renderer.game = self._game
+            self._renderer.make_display()
+
+        self._renderer.draw_surface()
+        self._renderer.update_display()
     
     def run_human(self):
-        self._game = Game(self._screen_size, self._building_gap, self._spawn_distance, self._FPS)
-        self._game.reset()
-        self._game.start()
+        if self._continuous:
+            raise RuntimeError(
+                "Cannot run continuous action space in human mode."
+            )
+        self.reset()
+
+        while True:
+            dead = self._game.action()
+            self.render()
+            if dead:
+                self.reset()
 
     def close(self):
-        if self._game.window is not None:
+        if self._renderer is not None:
+            self._renderer = None
             import pygame
             pygame.display.quit()
             pygame.quit()
+        super().close()
