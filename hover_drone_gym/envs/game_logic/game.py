@@ -9,7 +9,7 @@ from math import sqrt, cos, sin, pi, pow
 import numpy as np
 
 class Game():
-    def __init__(self, screen_size, building_gap, spawn_rate, FPS):
+    def __init__(self, screen_size, building_gap, spawn_rate, FPS, continuous):
         pygame.init()
         self.screen_width = screen_size[0]
         self.screen_height = screen_size[1]
@@ -33,6 +33,7 @@ class Game():
         self.score = 0
         self.step = 0
         self.radars = [(0,0) * 5]
+        self.continuous = continuous
 
     def get_raycast(self):
         return np.array([raycast[1] for raycast in self.radars])
@@ -144,8 +145,11 @@ class Game():
 
 
     def update_state(self, action):
-        self.moving = True      
-        self.drone.action(action)
+        self.moving = True
+        
+        if(self.continuous): self.drone.action2(action)
+        else: self.drone.action(action)
+
         self.drone.update()
         self.evaluate()
 

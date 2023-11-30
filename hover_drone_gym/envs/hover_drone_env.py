@@ -11,10 +11,15 @@ class HoverDroneEnv(gym.Env):
                 _spawn_distance=400,
                 _FPS=60,
                 _time_limit=1000,
-                render=True
+                render=True,
+                continuous=False
                 ):
-        
-        self.action_space = gym.spaces.Discrete(5)
+        self._continuous = continuous
+
+        if(self._continuous):
+            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=float)
+        else
+            self.action_space = gym.spaces.Discrete(5)
         self.render_frames = render
         
         self.observation_space = spaces.Dict({
@@ -71,7 +76,7 @@ class HoverDroneEnv(gym.Env):
     def step(self, action):
         reward = 0
         self._time += 1 / self._FPS
-        dead = self._game.update_state(int(action))
+        dead = self._game.update_state(action)
         obs = self._get_obs()
         reward = self._get_reward(dead, case=2)
 
@@ -90,7 +95,7 @@ class HoverDroneEnv(gym.Env):
     
     def reset(self, seed=None):
         super().reset(seed=seed)
-        self._game = Game(self._screen_size, self._building_gap, self._spawn_distance, self._FPS)
+        self._game = Game(self._screen_size, self._building_gap, self._spawn_distance, self._FPS, self._continuous)
         self._game.reset()
 
         return self._get_obs(), self._get_info()

@@ -47,7 +47,7 @@ def train(env):
     )
 
 def main():
-    env = HoverDroneEnv(render=False)
+    env = HoverDroneEnv(render=False, continous=False)
 
     train(env)
 
