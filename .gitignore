@@ -1,3 +1,7 @@
 venv
+models
+tmp
+wandb
+logs
 .DS_Store
 __pycache__

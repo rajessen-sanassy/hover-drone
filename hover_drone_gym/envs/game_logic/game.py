@@ -38,9 +38,9 @@ class Game():
         return np.array([raycast[1] for raycast in self.radars])
 
     def get_velocity(self):
-        velocity = sqrt(self.drone.velocity_x**2 + self.drone.velocity_y**2)
+        # velocity = sqrt(self.drone.velocity_x**2 + self.drone.velocity_y**2)
 
-        return velocity
+        return np.array([self.drone.velocity_x, self.drone.velocity_y])
 
     def get_angle(self): return self.drone.angle
 
@@ -52,6 +52,11 @@ class Game():
                 if building.intercept(x, y):
                     return True
         return False
+    
+    def check_screen_intercept(self, x, y):
+        if(y == 0 or y == self.screen_height):
+            return True
+        return False
 
     def check_radar(self, degree):
         length = 0
@@ -60,7 +65,8 @@ class Game():
         x = int(center[0] + cos(angle_radian) * length)
         y = int(center[1] + sin(angle_radian) * length)
 
-        while not self.check_building_intercept(x, y) and length < (self.screen_width - self.drone.rect.x):
+        while not (self.check_building_intercept(x, y) or self.check_screen_intercept(x, y)) \
+            and length < (self.screen_width - self.drone.rect.center[0]):
             length = length + 1
             x = int(center[0] + cos(angle_radian) * length)
             y = int(center[1] + sin(angle_radian) * length)
@@ -68,6 +74,31 @@ class Game():
         # Calculate Distance To Border And Append To Radars List
         dist = int(sqrt(pow(x - center[0], 2) + pow(y - center[1], 2)))
         self.radars.append([(x, y), dist])
+
+    def distance_to_target(self):
+        target = self.get_target()
+        if not target:
+            return 0
+
+        point1 = (self.drone.rect.center[0], self.drone.rect.center[1]-18)
+        point2 = target[1]
+
+        # if(point1[0] > point2[0]):
+        #     return 0
+
+        return int(sqrt(pow(point1[0] - point2[0], 2) + pow(point1[1] - point2[1], 2)))
+
+    def get_target(self):
+        for buildings in self.building_group:
+            if(not buildings[0].passed):
+                building_top = buildings[1].get_rect_lines()
+                building_bottom = buildings[0].get_rect_lines()
+                
+                return [building_top[2], (building_top[1][1], building_bottom[1][0]),
+                    building_bottom[0], (building_bottom[0][0], building_top[3][0])], \
+                    (building_bottom[0][1][0], int((building_top[3][0][1] + building_bottom[0][0][1])/2))
+        
+        return False
 
     def check_collisions(self):
         # check building collision
@@ -78,9 +109,10 @@ class Game():
                     self.drone.kia()
                     return True
 
-        # check ground collision
+        # check ground and ceiling collision
         floor_line = [((0, self.screen_height), (self.screen_width, self.screen_height)) * 4]
-        if self.check_hitbox(floor_line):
+        ceiling_line = [((0, 0), (self.screen_width, 0)) * 4]
+        if self.check_hitbox(floor_line) or self.check_hitbox(ceiling_line):
             self.drone.kia()
             return True
 
@@ -125,14 +157,12 @@ class Game():
         return self.check_collisions()
         
     def evaluate(self):
-        score = 0
         for buildings in self.building_group:
             if buildings[0].evaluate(self.drone.rect.center[0]):
                     buildings[1].is_passed = True
                     self.score += 1
-                    score = 1
-
-        return score
+                    return True
+        return False
     
     def view(self):
         self.screen.blit(self.background,(0,0))
@@ -172,10 +202,20 @@ class Game():
         self.screen.blit(player_copy, draw_pos)
 
         if self.gameover == False and self.moving == True: 
+            drone_position = (self.drone.rect.center[0], self.drone.rect.center[1]-18)
             for radar in self.radars:
                 position = radar[0]
-                pygame.draw.line(self.screen, (0, 255, 0), (self.drone.rect.center[0], self.drone.rect.center[1]-18), position, 1)
+                pygame.draw.line(self.screen, (0, 255, 0), drone_position, position, 1)
                 pygame.draw.circle(self.screen, (0, 255, 0), position, 5)
+            
+            target = self.get_target()
+            for line in target[0]:
+                pygame.draw.line(self.screen, (0, 0, 255), line[0], line[1], 1)
+            
+            pygame.draw.line(self.screen, (0, 0, 255), drone_position, target[1], 1)
+            pygame.draw.circle(self.screen, (0, 0, 255), target[1], 5)
+
+
 
         for line in self.drone.get_rect_lines():
             pygame.draw.line(self.screen, (255, 0, 0), line[0], line[1])
@@ -200,7 +240,26 @@ class Game():
 
         if (self.moving):
             key = pygame.key.get_pressed()
+
+            if key[pygame.K_UP]:
+                key = 0
+            elif key[pygame.K_DOWN]:
+                key = 1
+            elif key[pygame.K_LEFT]:
+                key = 2
+            elif key[pygame.K_RIGHT]:
+                key = 3
+
             self.update_state(key)
+
+    def _get_obs(self):
+        return {
+            'distance_to_target': self.distance_to_target(),
+            'raycast': self.get_raycast(),
+            'velocity': self.get_velocity(),
+            'angle': [self.get_angle()],
+            'angle_velocity': [self.get_angle_velocity()],
+        }
 
     def start(self):
         while True:    
@@ -209,6 +268,7 @@ class Game():
 
             self.action()
             self.view()
+            print(self._get_obs())
 
     def reset(self):
         self.score = 0

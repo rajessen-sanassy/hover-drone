@@ -10,14 +10,17 @@ class HoverDroneEnv(gym.Env):
                 _building_gap=120,
                 _spawn_distance=400,
                 _FPS=60,
-                _time_limit=1000
+                _time_limit=1000,
+                render=True
                 ):
         
-        self.action_space = gym.spaces.Discrete(4)
+        self.action_space = gym.spaces.Discrete(5)
+        self.render_frames = render
         
         self.observation_space = spaces.Dict({
-            'raycast': spaces.Box(low=-np.inf, high=np.inf, shape=(5,), dtype=np.float32),
-            'velocity': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
+            'distance_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
+            'raycast': spaces.Box(low=-np.inf, high=np.inf, shape=(9,), dtype=np.float32),
+            'velocity': spaces.Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float32),
             'angle': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             'angle_velocity': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
         })
@@ -32,10 +35,11 @@ class HoverDroneEnv(gym.Env):
 
     def _get_obs(self):
         return {
+            'distance_to_target': self._game.distance_to_target(),
             'raycast': self._game.get_raycast(),
-            'velocity': [self._game.get_velocity()],
-            'angle': [self._game.get_angle()],
-            'angle_velocity': [self._game.get_angle_velocity()],
+            'velocity': self._game.get_velocity(),
+            'angle': self._game.get_angle(),
+            'angle_velocity': self._game.get_angle_velocity(),
         }
 
     def _get_info(self):
@@ -49,11 +53,9 @@ class HoverDroneEnv(gym.Env):
         reward += 1/self._FPS
 
         # Passing obstacle 
-        # (+10)
-        score = self._game.evaluate()
-        self._game.score += score
-        if(score):
-            reward += 10    
+        # (+100)
+        if(self._game.evaluate()):
+            reward += 100    
         
         # Agent dies 
         # (-1000 game is over)
@@ -62,9 +64,7 @@ class HoverDroneEnv(gym.Env):
 
         # CASE 2 REWARD STRUCTURE
         if (case == 2):
-            #not within safe zone (-distance from the safe zone)
-            reward -= abs(self._game.y_distance_from_safe_zone()) 
-            reward -= abs(self._game.x_distance_from_building()) // 2  
+            reward -= self._game.distance_to_target() / (100 * self._FPS)
         
         return reward
     
@@ -73,9 +73,10 @@ class HoverDroneEnv(gym.Env):
         self._time += 1 / self._FPS
         dead = self._game.update_state(int(action))
         obs = self._get_obs()
-        reward = self._get_reward(dead, case=1)
+        reward = self._get_reward(dead, case=2)
 
-        self.render()
+        if self.render_frames:
+            self.render()
 
         # time exit case
         if self._time > self._time_limit:

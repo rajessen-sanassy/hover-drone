@@ -128,15 +128,15 @@ class Drone():
         thruster_right = self.thruster_default
 
         # Adjusting the thrust based on key press
-        if key==0 or key[pygame.K_UP]:
+        if key==0:
             thruster_left += self.thruster_amplitude
             thruster_right += self.thruster_amplitude
-        elif key==1 or key[pygame.K_DOWN]:
+        elif key==1:
             thruster_left -= self.thruster_amplitude
             thruster_right -= self.thruster_amplitude
-        elif key==2 or key[pygame.K_LEFT]:
+        elif key==2:
             thruster_left -= self.diff_amplitude
-        elif key==3 or key[pygame.K_RIGHT]:
+        elif key==3:
             thruster_right -= self.diff_amplitude
         else:
             self.velocity_x /= 1.01
