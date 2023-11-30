@@ -47,7 +47,6 @@ class Display():
             if(reward):
                 self._draw_reward(reward)
 
-
     def _draw_buildings(self) -> None:
         for buildings in self._game.building_group:
             for building in buildings:

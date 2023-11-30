@@ -89,13 +89,13 @@ class HoverDroneEnv(gym.Env):
         if self._render_frames:
             self.render(reward)
 
-        # time exit case
-        if self._time > self._time_limit:
-            terminated = True
-
         terminated = dead
         truncated = False
         info = {"score": self._game.score}
+        
+        # time exit case
+        if self._time > self._time_limit:
+            terminated = True
         
         return obs, reward, terminated, truncated, info
     
@@ -135,7 +135,7 @@ class HoverDroneEnv(gym.Env):
             dead = self._game.action()
             reward += self._get_reward(dead, case=2)
             self.render(reward)
-            
+
             if dead:
                 reward = 0
                 self.reset()
