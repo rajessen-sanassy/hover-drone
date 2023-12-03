@@ -1,7 +1,7 @@
 import os
 from hover_drone_gym import HoverDroneEnv
-from stable_baselines3 import DQN, PPO
-from sb3_contrib import QRDQN
+from stable_baselines3 import DQN, PPO, TD3, SAC
+from sb3_contrib import QRDQN, TQC
 # from sbx import PPO
 from stable_baselines3.dqn.policies import MultiInputPolicy
 from stable_baselines3.common.monitor import Monitor
@@ -23,8 +23,9 @@ def train(env):
 
     # policy_kwargs = dict(n_quantiles=50, net_arch=[256, 256, 256, 256]) # QRDQN
     policy_kwargs = dict(net_arch=[256, 256, 256, 256])
-    model = QRDQN("MultiInputPolicy", env, gamma=0.9975, learning_rate=3e-4, batch_size=64, policy_kwargs=policy_kwargs, verbose=1)
-    # model = TQC("MultiInputPolicy", env, top_quantiles_to_drop_per_net=2, verbose=1)
+    # model = QRDQN("MultiInputPolicy", env, gamma=0.9975, learning_rate=3e-4, batch_size=64, policy_kwargs=policy_kwargs, verbose=1)
+    model = TQC("MultiInputPolicy", env, learning_rate=3e-4, batch_size=64, top_quantiles_to_drop_per_net=2, verbose=1)
+    # model = SAC("MultiInputPolicy", env, learning_rate=3e-4, batch_size=64, policy_kwargs=policy_kwargs, verbose=1)
     # model = PPO("MultiInputPolicy", env, verbose=1, gamma=0.9975, ent_coef=0.01, policy_kwargs=policy_kwargs, tensorboard_log=log_dir)
     print(model.policy)
     checkpoint_callback = CheckpointCallback(
@@ -46,7 +47,7 @@ def train(env):
     )
 
 def main():
-    env = HoverDroneEnv(render=False, continuous=False)
+    env = HoverDroneEnv(render=True, continuous=True)
 
     train(env)
 

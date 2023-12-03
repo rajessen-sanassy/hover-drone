@@ -32,16 +32,41 @@ class Physics():
 
         # Length from center of mass to propeller
         self._arm = 25
+
+        # Test
     
     def move(self, action):
         if(self._action_space_type=="discrete"):
             self._discrete_action(action)
         elif(self._action_space_type=="continuous"):
-            self._continous_action(action)
+            # self._continous_action(action)
+            self._test_continuous_action(action)
 
         self._angle += self._angular_speed
 
         return self._velocity_x, self._velocity_y
+    
+    def _test_continuous_action(self, thrusts: np.array):
+        (action0, action1) = (thrusts[0], thrusts[1])
+
+        self._acceleration_x = 0
+        self._acceleration_y = self._gravity
+        self._angular_acceleration = 0
+        thruster_left = self._thruster_default
+        thruster_right = self._thruster_default
+
+        thruster_left += action0 * self._thruster_amplitude
+        thruster_right += action0 * self._thruster_amplitude
+        thruster_left += action1 * self._diff_amplitude
+        thruster_right -= action1 * self._diff_amplitude
+
+        self._acceleration_x += (-(thruster_left + thruster_right) * sin(self.angle * pi / 180) / self._mass)
+        self._acceleration_y += (-(thruster_left + thruster_right) * cos(self.angle * pi / 180) / self._mass)
+        self._angular_acceleration += self._arm * (thruster_right - thruster_left) / self._mass
+
+        self._velocity_x += self._acceleration_x
+        self._velocity_y += self._acceleration_y
+        self._angular_speed += self._angular_acceleration
 
     # Rigid body with 2 thrust points
     # The rigid body is shaped like a beam
@@ -54,6 +79,11 @@ class Physics():
         thrust_value = 1
         air_resistance = 1
         angular_resistance = 1
+
+        # prevent 0 division error
+        self._velocity_x += 1e-5
+        self._velocity_y += 1e-5
+        self._angular_speed += 1e-5
 
         # both thrusters are pointing the same direction
         total_thrust = np.sum(thrusts)
@@ -69,8 +99,8 @@ class Physics():
         y_thrust -= self._velocity_y**2 * self._velocity_y * air_resistance / abs(self._velocity_y)
         angle_acc -= self._angular_speed**2 * self._angular_speed * angular_resistance / abs(self._angular_speed)
 
-        self._velocity_x += self.acceleration_x
-        self._velocity_y += self.acceleration_y 
+        self._velocity_x += self._acceleration_x
+        self._velocity_y += self._acceleration_y 
         self._angular_speed += angle_acc
 
     def _discrete_action(self, key):
