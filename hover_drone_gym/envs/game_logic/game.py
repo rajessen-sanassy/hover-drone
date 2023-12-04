@@ -87,13 +87,13 @@ class Game():
                     score += 1
         return score
 
-    def action(self):
+    def action(self, action=None):
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN and not self._moving and not self._gameover:
                 if event.key in [pygame.K_DOWN, pygame.K_UP, pygame.K_RIGHT, pygame.K_LEFT]:
                     self._moving = True
 
-        if (self._moving):
+        if (self._moving and action is None):
             key = pygame.key.get_pressed()
 
             if key[pygame.K_UP]:
@@ -108,6 +108,8 @@ class Game():
                 key = 4
 
             return self.update_state(key)
+        else:
+            return self.update_state(action)
 
     def reset(self):
         self._score = 0
@@ -217,10 +219,8 @@ class Game():
     def _check_collisions(self):
         for intercept_line in self._get_intercept_lines():
             if self._check_hitbox(intercept_line):
-                self.drone.kia()
                 self._gameover = True
                 return True
-
         return False
     
     def _check_hitbox(self, intercept_line):

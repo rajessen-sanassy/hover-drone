@@ -22,9 +22,6 @@ class Drone():
         self._velocity_x, self._velocity_y = self._physics.move(action)
 
     def update(self):
-        if(not self._is_alive):
-            return
-
         #updating the positions 
         self._rect.y += self._velocity_y
         

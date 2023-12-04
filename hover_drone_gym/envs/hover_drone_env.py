@@ -14,7 +14,7 @@ class HoverDroneEnv(gym.Env):
                 _time_limit=1000,
                 render=True,
                 continuous=False,
-                visualize=False,
+                visualize=True,
                 ):
         self._screen_size = screen_size
         self._building_gap = _building_gap
@@ -45,9 +45,9 @@ class HoverDroneEnv(gym.Env):
     def _get_obs(self):
         return {
             'distance_to_target': self._game.get_distance_to_target(),
-            'raycast': self._game.get_raycast(),
-            'velocity': self._game.get_velocity(),
-            'angle': self._game.get_angle(),
+            'raycast': self._game.get_raycast() / 675,
+            'velocity': self._game.get_velocity() / 4,
+            'angle': self._game.get_angle() / 180,
             'angle_velocity': self._game.get_angle_velocity(),
         }
 
@@ -65,6 +65,7 @@ class HoverDroneEnv(gym.Env):
         # Passing obstacle 
         # (+100)
         if(self._game.score > self._last_score):
+            print("PASS")
             self._last_score = self._game.score
             reward += 100    
         
@@ -82,10 +83,10 @@ class HoverDroneEnv(gym.Env):
     def step(self, action):
         reward = 0
         self._time += 1 / self._FPS
-        dead = self._game.update_state(action)
+        dead = self._game.action(action)
         obs = self._get_obs()
         reward = self._get_reward(dead, case=2)
-
+        
         if self._render_frames:
             self.render(reward)
 
@@ -107,6 +108,7 @@ class HoverDroneEnv(gym.Env):
                           continuous=self._continuous)
         self._game.reset()
         self._last_score = 0
+        self._time = 0
 
         if self._renderer is not None:
             self._renderer.game = self._game

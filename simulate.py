@@ -18,16 +18,15 @@ def _get_args():
     return parser.parse_args()
 
 def run_env(env):
-    env = HoverDroneEnv()
     env.reset()
-    while True:
-        env.render()
 
+    while True:
         # getting random action:
         action = env.action_space.sample()
-
+        
         # processing:
         obs, reward, done, _, info = env.step(action)
+        env.render()
 
         print(f"Obs: {obs}\n"
               f"Action: {action}\n"
