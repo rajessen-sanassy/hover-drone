@@ -38,7 +38,7 @@ class Game():
 
     def get_angle_to_target(self):
         target = self._get_target()
-        if not target: return 0
+        if not target: return 0.0
 
         x, y = self.drone.position
         xt, yt = target[1]

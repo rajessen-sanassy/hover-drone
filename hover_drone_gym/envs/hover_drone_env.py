@@ -48,12 +48,12 @@ class HoverDroneEnv(gym.Env):
     def _get_obs(self):
         return {
             'distance_to_target': self._game.get_distance_to_target(),
-            'angle_to_target': {self._game.get_angle_to_target()},
+            'angle_to_target': self._game.get_angle_to_target(),
             'raycast': self._game.get_raycast(),
             'velocity': self._game.get_velocity(),
             'angle': self._game.get_angle(),
             'angle_velocity': self._game.get_angle_velocity(),
-            # 'x_distance_to_target': {self._game.get_x_distance()/780},
+            # 'x_distance_to_target': self._game.get_x_distance(),
         }
 
     def _get_info(self):
