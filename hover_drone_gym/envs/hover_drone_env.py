@@ -35,25 +35,25 @@ class HoverDroneEnv(gym.Env):
             self.action_space = gym.spaces.Discrete(5)
         
         self.observation_space = spaces.Dict({
-            'distance_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
-            'angle_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
+            # 'distance_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
+            # 'angle_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
+            'x_distance_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             'raycast': spaces.Box(low=-np.inf, high=np.inf, shape=(9,), dtype=np.float32),
-            'velocity': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
+            'velocity': spaces.Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float32),
             'angle': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             'angle_velocity': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
-            # 'x_distance_to_target': spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             
         })
 
     def _get_obs(self):
         return {
-            'distance_to_target': self._game.get_distance_to_target(),
-            'angle_to_target': self._game.get_angle_to_target(),
+            # 'distance_to_target': self._game.get_distance_to_target()/780,
+            # 'angle_to_target': self._game.get_angle_to_target(),
+            'x_distance_to_target': self._game.get_x_distance()/780,
             'raycast': self._game.get_raycast(),
             'velocity': self._game.get_velocity(),
             'angle': self._game.get_angle(),
             'angle_velocity': self._game.get_angle_velocity(),
-            # 'x_distance_to_target': self._game.get_x_distance(),
         }
 
     def _get_info(self):
@@ -81,7 +81,7 @@ class HoverDroneEnv(gym.Env):
 
         # CASE 2 REWARD STRUCTURE
         if (case == 2):
-            reward -= self._game.get_distance_to_target() / (500 * self._FPS)
+            reward -= self._game.get_x_distance() / (500 * self._FPS)
         
         return reward
     

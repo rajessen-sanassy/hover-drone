@@ -26,13 +26,13 @@ class Game():
         self._drone = None
 
     def get_raycast(self):
-        return np.round_(np.array([raycast[1] for raycast in self._radars])/780, decimals=5)
+        return np.array([raycast[1] for raycast in self._radars])/780
 
     def get_velocity(self):
-        return sqrt(self.drone.velocity_x**2 + self.drone.velocity_y**2)/10
-        # return np.array([self.drone.velocity_x, self.drone.velocity_y])
+        # return sqrt(self.drone.velocity_x**2 + self.drone.velocity_y**2)/10
+        return np.array([self.drone.velocity_x, self.drone.velocity_y]) / 4
 
-    def get_angle(self): return self.drone.angle/180
+    def get_angle(self): return self.drone.angle / 180
 
     def get_angle_velocity(self): return self.drone.angular_speed
 
@@ -42,7 +42,7 @@ class Game():
 
         x, y = self.drone.position
         xt, yt = target[1]
-        return np.arctan2(yt - y, xt - x)
+        return np.arctan2(yt - y, xt - x) / pi
     
     def get_distance_to_target(self):
         target = self._get_target()
@@ -51,7 +51,7 @@ class Game():
         point1 = self.drone.position
         point2 = target[1]
 
-        return sqrt(pow(point1[0] - point2[0], 2) + pow(point1[1] - point2[1], 2))/780
+        return sqrt(pow(point1[0] - point2[0], 2) + pow(point1[1] - point2[1], 2))
 
     def get_x_distance(self):
         x = 0
@@ -60,7 +60,7 @@ class Game():
         for buildings in self.building_group:
             if(buildings[0].passed): continue
             x = target[1][0] - self.drone.position_x
-            return x/780
+            return x
         return x
 
     def update_state(self, action):

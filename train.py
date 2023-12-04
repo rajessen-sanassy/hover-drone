@@ -30,8 +30,8 @@ def train(env, models, log_dir, load=False):
     )
 
     # Train the agent
-    # if load:
-        # model = QRDQN.load("tmp/rl_model_v1_10000000_steps.zip", env, gamma=0.9975, learning_rate=3e-4, batch_size=64, verbose=1)
+    if load:
+        model = TQC.load("tmp/TQC_2023-12-03_23:32:53_600000_steps.zip", env, gamma=0.9975, learning_rate=3e-4, batch_size=64, verbose=1)
     model.learn(
         total_timesteps=100000000,
         callback=[
@@ -59,7 +59,7 @@ def main():
         # "PPO": PPO("MultiInputPolicy", env, verbose=1, gamma=0.9975, ent_coef=0.01, policy_kwargs=policy_kwargs1),
         # "QRDQN": QRDQN("MultiInputPolicy", env, gamma=0.9975, learning_rate=3e-4, batch_size=64, policy_kwargs=policy_kwargs0, verbose=1),
         # "DQN": DQN("MultiInputPolicy", env, verbose=1),
-        "TQC": TQC("MultiInputPolicy", env, gamma=0.9975, learning_rate=3e-4, policy_kwargs=policy_kwargs1, top_quantiles_to_drop_per_net=2, verbose=1),
+        "TQC": TQC("MultiInputPolicy", env, tau=0.01, ent_coef='auto', gamma=0.99, learning_rate=3e-4, batch_size=256, policy_kwargs=policy_kwargs1, top_quantiles_to_drop_per_net=3, verbose=1),
     }
 
     train(env, models, log_dir, load=False)
