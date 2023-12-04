@@ -98,10 +98,12 @@ class Display():
         font = pygame.font.Font(None, 18)
         text = f"""
             distance_to_target: {self._game.get_distance_to_target()}\n\
+            angle_to_target: {self._game.get_angle_to_target()}\n\
             raycast: {self._game.get_raycast()}\n\
             velocity: {self._game.get_velocity()}\n\
             angle: {self._game.get_angle()}\n\
-            angle_velocity: {self._game.get_angle_velocity()}"""
+            angle_velocity: {self._game.get_angle_velocity()}
+            x_distance to target: {self._game.get_x_distance()}"""
 
         lines = text.splitlines()
         for i, l in enumerate(lines):
@@ -111,7 +113,7 @@ class Display():
         font = pygame.font.Font(None, 18)
         text = f"reward: {reward}"
 
-        self._surface.blit(font.render(text, True, (0,0,0)), [16, 80])
+        self._surface.blit(font.render(text, True, (0,0,0)), [16, 140])
 
     def update_display(self):
         if self._display is None:

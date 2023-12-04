@@ -33,7 +33,7 @@ def train(env, models, log_dir, load=False):
     # if load:
         # model = QRDQN.load("tmp/rl_model_v1_10000000_steps.zip", env, gamma=0.9975, learning_rate=3e-4, batch_size=64, verbose=1)
     model.learn(
-        total_timesteps=10000000,
+        total_timesteps=100000000,
         callback=[
             checkpoint_callback,
             WandbCallback(
