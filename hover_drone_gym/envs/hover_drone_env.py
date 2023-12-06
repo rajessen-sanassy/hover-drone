@@ -24,6 +24,7 @@ class HoverDroneEnv(gym.Env):
         self._time = 0
         self._render_frames = render
         self._last_score = 0
+        self._high_score = 0
         self._continuous = continuous
         self._visualize = visualize
         self._game = None
@@ -70,9 +71,11 @@ class HoverDroneEnv(gym.Env):
         # Passing obstacle 
         # (+100)
         if(self._game.score > self._last_score):
-            print("PASS")
             self._last_score = self._game.score
             reward += 100    
+            if(self._last_score > self._high_score):
+                self._high_score = self._last_score
+                print(f"New High Score: {self._high_score}")
         
         # Agent dies 
         # (-1000 game is over)

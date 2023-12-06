@@ -1,6 +1,7 @@
 import argparse
 import time
 from hover_drone_gym import HoverDroneEnv
+from sb3_contrib import TQC
 
 def _get_args():
     """ Parses the command line arguments and returns them. """
@@ -11,22 +12,26 @@ def _get_args():
         "--mode", "-m",
         type=str,
         default="human",
-        choices=["human", 'random'],
+        choices=["human", 'model'],
         help="The execution mode for the game.",
     )
 
     return parser.parse_args()
 
 def run_env(env):
-    env.reset()
-
+    m1 = "tmp/TQC_2023-12-04_17:05:21_300000_steps.zip"
+    m2 = "tmp/TQC_2023-12-04_22:30:23_900000_steps.zip"
+    a1 = "tmp/alpha_50000_steps.zip"
+    model = TQC.load(m2, env=env)
+    vec_env = model.get_env()
+    obs = vec_env.reset()
     while True:
         # getting random action:
-        action = env.action_space.sample()
+        action, _ = model.predict(obs, deterministic=True)
         
         # processing:
-        obs, reward, done, _, info = env.step(action)
-        env.render()
+        obs, reward, done, info = vec_env.step(action)
+        vec_env.render()
 
         print(f"Obs: {obs}\n"
               f"Action: {action}\n"
@@ -45,8 +50,8 @@ def main():
     if args.mode == "human":
         env = HoverDroneEnv(visualize=True)
         env.run_human()
-    elif args.mode == "random":
-        env = HoverDroneEnv(visualize=True)
+    elif args.mode == "model":
+        env = HoverDroneEnv(visualize=True, continuous=True)
         run_env(env)
     else:
         print("Invalid mode!")
