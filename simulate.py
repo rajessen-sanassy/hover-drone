@@ -1,7 +1,8 @@
 import argparse
 import time
 from hover_drone_gym import HoverDroneEnv
-from sb3_contrib import TQC
+from sb3_contrib import TQC, QRDQN
+from stable_baselines3 import DQN, PPO, TD3, SAC
 
 def _get_args():
     """ Parses the command line arguments and returns them. """
@@ -19,9 +20,16 @@ def _get_args():
     return parser.parse_args()
 
 def run_env(env):
-    m1 = "performant_models/TQC_2023-12-04_17:05:21_300000_steps.zip"
-    m2 = "performant_models/TQC_2023-12-04_22:30:23_900000_steps.zip"
+    d1 = "performant_models/QRDQN_2000000_steps.zip"
+    d2 = "performant_models/QRDQN_4000000_steps.zip"
+    d3 = "performant_models/PPO_900000_steps.zip"
+
+    m1 = "performant_models/TQC_300000_steps.zip"
+    m2 = "performant_models/TQC_900000_steps.zip"
+    s1 = "tmp/SAC_1300000_steps.zip"
+    
     model = TQC.load(m2, env=env)
+
     vec_env = model.get_env()
     obs = vec_env.reset()
     while True:

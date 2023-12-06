@@ -10,7 +10,7 @@ class HoverDroneEnv(gym.Env):
                 screen_size=(800, 500),
                 _building_gap=120,
                 _spawn_distance=400,
-                _FPS=120,
+                _FPS=60,
                 _time_limit=1000,
                 render=True,
                 continuous=False,

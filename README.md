@@ -12,5 +12,5 @@ Windows: `/venv/bin/activate`
 `python3 simulate.py`<br>
 `python3 simulate.py -m human`
 
-## run gym environment game (random actions)
-`python3 simulate.py -m random`
+## run gym environment game (model actions)
+`python3 simulate.py -m model`

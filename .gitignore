@@ -3,5 +3,6 @@ models
 tmp
 wandb
 logs
+performant_models
 .DS_Store
 __pycache__
