@@ -1,6 +1,7 @@
 
 import pygame
 from hover_drone_gym.envs.game_logic.utils import load_images
+import numpy as np
 
 FILL_BACKGROUND_COLOR = (200, 200, 200)
 
@@ -82,13 +83,15 @@ class Display():
     
     def _draw_target(self) -> None:
         if not self._game.building_group: return
-
+    
         target = self._game._get_target()
+        point = (target[1][0], self._game.drone.position_y)
+        
         for line in target[0]:
             pygame.draw.line(self._surface, (0, 0, 255), line[0], line[1], 1)
         
-        pygame.draw.line(self._surface, (0, 0, 255), self._game.drone.position, target[1], 1)
-        pygame.draw.circle(self._surface, (0, 0, 255), target[1], 5)
+        pygame.draw.line(self._surface, (0, 0, 255), self._game.drone.position, point, 1)
+        pygame.draw.circle(self._surface, (0, 0, 255), point, 5)
 
     def _draw_hitbox(self) -> None:
         for line in self._game.drone.get_rect_lines():
@@ -97,13 +100,14 @@ class Display():
     def _write_metrics(self) -> None:
         font = pygame.font.Font(None, 18)
         text = f"""
-            distance_to_target: {self._game.get_distance_to_target()}\n\
-            angle_to_target: {self._game.get_angle_to_target()}\n\
-            raycast: {self._game.get_raycast()}\n\
             velocity: {self._game.get_velocity()}\n\
             angle: {self._game.get_angle()}\n\
             angle_velocity: {self._game.get_angle_velocity()}
-            x_distance to target: {self._game.get_x_distance()}"""
+            x_distance to target: {self._game.get_x_distance()}
+            raycast: {np.round(self._game.get_raycast(), decimals=5)}\n"""
+        
+        # distance_to_target: {self._game.get_distance_to_target()}\n\
+        # angle_to_target: {self._game.get_angle_to_target()}\n\
 
         lines = text.splitlines()
         for i, l in enumerate(lines):
@@ -113,7 +117,7 @@ class Display():
         font = pygame.font.Font(None, 18)
         text = f"reward: {reward}"
 
-        self._surface.blit(font.render(text, True, (0,0,0)), [16, 140])
+        self._surface.blit(font.render(text, True, (0,0,0)), [16, 80])
 
     def update_display(self):
         if self._display is None:

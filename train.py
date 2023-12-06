@@ -12,7 +12,7 @@ from wandb.integration.sb3 import WandbCallback
 from datetime import datetime
 
 def train(env, models, log_dir, load=False):
-    model_name = "TQC"
+    model_name = "SAC"
 
     run = wandb.init(
         project="hoverdrone",
@@ -26,7 +26,7 @@ def train(env, models, log_dir, load=False):
     time = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 
     checkpoint_callback = CheckpointCallback(
-        save_freq=10000, save_path=log_dir, name_prefix=f"alpha"
+        save_freq=10000, save_path=log_dir, name_prefix=f"SAC"
     )
 
     # Train the agent
@@ -39,7 +39,7 @@ def train(env, models, log_dir, load=False):
             checkpoint_callback,
             WandbCallback(
                 gradient_save_freq=10000,
-                model_save_path=f"models/alpha",
+                model_save_path=f"models/SAC",
                 model_save_freq=10000,
                 verbose=2,
             ),
@@ -60,10 +60,10 @@ def main():
         # "PPO": PPO("MultiInputPolicy", env, verbose=1, gamma=0.9975, ent_coef=0.01, policy_kwargs=policy_kwargs1),
         # "QRDQN": QRDQN("MultiInputPolicy", env, gamma=0.9975, learning_rate=3e-4, batch_size=64, policy_kwargs=policy_kwargs0, verbose=1),
         # "DQN": DQN("MultiInputPolicy", env, verbose=1),
-        "TQC": TQC("MultiInputPolicy", env, tau=0.01, ent_coef='auto', gamma=0.99, learning_rate=3e-4, batch_size=256, policy_kwargs=policy_kwargs1, top_quantiles_to_drop_per_net=3, verbose=1),
+        "SAC": SAC("MultiInputPolicy", env, tau=0.01, ent_coef='auto', gamma=0.99, learning_rate=3e-4, batch_size=256, policy_kwargs=policy_kwargs1, verbose=1),
     }
 
-    train(env, models, log_dir, load=True)
+    train(env, models, log_dir, load=False)
 
 if __name__ == "__main__":
     main()

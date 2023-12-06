@@ -19,9 +19,8 @@ def _get_args():
     return parser.parse_args()
 
 def run_env(env):
-    m1 = "tmp/TQC_2023-12-04_17:05:21_300000_steps.zip"
-    m2 = "tmp/TQC_2023-12-04_22:30:23_900000_steps.zip"
-    a1 = "tmp/alpha_50000_steps.zip"
+    m1 = "performant_models/TQC_2023-12-04_17:05:21_300000_steps.zip"
+    m2 = "performant_models/TQC_2023-12-04_22:30:23_900000_steps.zip"
     model = TQC.load(m2, env=env)
     vec_env = model.get_env()
     obs = vec_env.reset()
@@ -39,10 +38,8 @@ def run_env(env):
               f"Done: {done}\n"
               f"Info: {info}\n")
 
-        time.sleep(1/60)
-
         if done:
-            env.reset()
+            vec_env.reset()
 
 def main():
     args = _get_args()

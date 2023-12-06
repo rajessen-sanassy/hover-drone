@@ -24,6 +24,7 @@ class Game():
         self._gameover = False
         self._prev_building = None                            
         self._drone = None
+        # np.random.seed(1)
 
     def get_raycast(self):
         return np.array([raycast[1] for raycast in self._radars])/780
@@ -145,7 +146,7 @@ class Game():
     def _create_building(self):
         height_upperbound = (self._screen_height/2) - self._building_gap
         height_lowerbound = (-1) * ((self._screen_height/2)-self._building_gap)
-        building_height = random.randint(height_lowerbound, height_upperbound)
+        building_height = np.random.randint(height_lowerbound, height_upperbound)
 
         lower_building = Building(self._screen_width, 
                                   int(self._screen_height/2) + building_height, 
