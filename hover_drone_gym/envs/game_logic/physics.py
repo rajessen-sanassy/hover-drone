@@ -32,76 +32,51 @@ class Physics():
 
         # Length from center of mass to propeller
         self._arm = 25
-
-        # Test
     
     def move(self, action):
         if(self._action_space_type=="discrete"):
             self._discrete_action(action)
         elif(self._action_space_type=="continuous"):
-            # self._continous_action(action)
-            self._test_continuous_action(action)
+            self._continous_action(action)
 
         self._angle += self._angular_speed
 
         return self._velocity_x, self._velocity_y
     
-    def _test_continuous_action(self, thrusts: np.array):
-        (action0, action1) = (thrusts[0], thrusts[1])
-
-        self._acceleration_x = 0
-        self._acceleration_y = self._gravity
-        self._angular_acceleration = 0
-        thruster_left = self._thruster_default
-        thruster_right = self._thruster_default
-
-        thruster_left += action0 * self._thruster_amplitude
-        thruster_right += action0 * self._thruster_amplitude
-        thruster_left += action1 * self._diff_amplitude
-        thruster_right -= action1 * self._diff_amplitude
-
-        self._acceleration_x += (-(thruster_left + thruster_right) * sin(self.angle * pi / 180) / self._mass)
-        self._acceleration_y += (-(thruster_left + thruster_right) * cos(self.angle * pi / 180) / self._mass)
-        self._angular_acceleration += self._arm * (thruster_right - thruster_left) / self._mass
-
-        self._velocity_x += self._acceleration_x
-        self._velocity_y += self._acceleration_y
-        self._angular_speed += self._angular_acceleration
-
-    # Rigid body with 2 thrust points
-    # The rigid body is shaped like a beam
-    # The thrust is directed perpindicular to the beam
-    # Two thrust values from -1 to 1 which correlate to the thrusts of each of the 2 thrust points
-    # The direction of these thrust values indicates which direction perpindicular to the beam the thrust is going
-    # The magnitude of the thrust values correlates to how much thrust is being applied from 0-100%
-    def _continous_action(self, thrusts: np.array):
-        # constant values
+    def _continous_action(self, factors: np.array):
+        # factor0 = overall thrusts on thrusters
+        # factor1 = rotational thrust
+        (factor0, factor1) = (factors[0], factors[1])
         thrust_value = 1
         air_resistance = 1
         angular_resistance = 1
 
-        # prevent 0 division error
-        self._velocity_x += 1e-5
-        self._velocity_y += 1e-5
-        self._angular_speed += 1e-5
+        # reset thrusts to default values
+        thruster_left = self._thruster_default
+        thruster_right = self._thruster_default
 
-        # both thrusters are pointing the same direction
-        total_thrust = np.sum(thrusts)
+        # reset drone accelerations
+        self._acceleration_x = 0
+        self._acceleration_y = self._gravity
+        self._angular_acceleration = 0
 
-        # caclulate thrust direction based on angle
-        x_thrust = -(total_thrust * sin(self._angle)) * thrust_value / self._mass
-        y_thrust = -(total_thrust * cos(self._angle)) * thrust_value / self._mass
+        # calculate thrust based on thrust factor inputs (factor0, factor1)
+        thruster_left += factor0 * self._thruster_amplitude * thrust_value
+        thruster_right += factor0 * self._thruster_amplitude * thrust_value
 
-        # calculate angular change based on difference of thrusts
-        angle_acc = self._arm * (thrusts[0] - thrusts[1]) * self._arm * thrust_value / self._mass
+        # adjust thrusts based on factor1 for turning
+        thruster_left += factor1 * self._diff_amplitude
+        thruster_right -= factor1 * self._diff_amplitude
 
-        x_thrust -= self._velocity_x**2 * self._velocity_x * air_resistance / abs(self._velocity_x)
-        y_thrust -= self._velocity_y**2 * self._velocity_y * air_resistance / abs(self._velocity_y)
-        angle_acc -= self._angular_speed**2 * self._angular_speed * angular_resistance / abs(self._angular_speed)
+        # calculate accelerations based on thrust
+        self._acceleration_x += (-(thruster_left + thruster_right) * sin(self.angle * pi / 180) / (self._mass * air_resistance))
+        self._acceleration_y += (-(thruster_left + thruster_right) * cos(self.angle * pi / 180) / (self._mass * air_resistance))
+        self._angular_acceleration += self._arm * (thruster_right - thruster_left) / (self._mass  * angular_resistance)
 
+        # update velocity
         self._velocity_x += self._acceleration_x
-        self._velocity_y += self._acceleration_y 
-        self._angular_speed += angle_acc
+        self._velocity_y += self._acceleration_y
+        self._angular_speed += self._angular_acceleration
 
     def _discrete_action(self, key):
         # Resetting values
