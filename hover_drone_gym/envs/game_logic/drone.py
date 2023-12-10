@@ -1,197 +1,129 @@
 import pygame
-from pygame.locals import *
-from pygame.sprite import *
-import os
 from math import sin, cos, pi
+from hover_drone_gym.envs.game_logic.physics import Physics
 
-FPS = 60
-WIDTH = 800
-HEIGHT = 500
-BASE_PATH = os.path.realpath("./hover_drone_gym/assets")
-DRONE_IMAGE = os.path.join(BASE_PATH, 'drone.png')
-BG_IMAGE = os.path.join(BASE_PATH, 'background.png')
+DRONE_WIDTH = 50
+DRONE_HEIGHT = 50
 
-class Drone(pygame.sprite.Sprite):
-    def __init__(self, x, y, screen_width, screen_height, drone_image):
-        pygame.sprite.Sprite.__init__(self) 
-        self.image = drone_image
-        self.rect = self.image.get_rect()
-        self.rect.center = [x,y]
+class Drone():
+    def __init__(self, x: int, y: int, continuous: bool):
+        """
+        Initialize the Drone object.
 
-        # physics
-        # gravity
-        self.gravity = 0.08
+        Parameters:
+            - x, y: Initial coordinates of the drone.
+            - continuous: A boolean indicating whether the drone operates in a continuous action space.
+        """
+        self._rect = pygame.Rect(x, y, DRONE_WIDTH, DRONE_HEIGHT)
+        self._rect.center = [x,y]
+        if continuous:
+            self._physics = Physics("continuous")
+        else:
+            self._physics = Physics("discrete")
 
-        # initialize angular movements
-        self.angle = 0
-        self.angular_speed = 0
-        self.angular_acceleration = 0
+        self._velocity_x = 0
+        self._velocity_y = 0
+        self._is_alive = True
 
-        # initialize velocities and accelerations
-        self.is_alive = True
-        self.screen_width = screen_width
-        self.screen_height = screen_height
+    def action(self, action) -> None:
+        """
+        Apply the given action to the drone.
 
-        # initialize velocities and accelerations
-        self.velocity_x = 0
-        self.acceleration_x = 0
-        self.acceleration_x = 0
-        self.velocity_y = 0
-        self.acceleration_y = 0
+        Parameters:
+            - action: Action to be applied.
+        """
+        self._velocity_x, self._velocity_y = self._physics.move(action)
 
-        # propeller thrust to be added upon button presses
-        self.thruster_amplitude = 0.04
+    def update(self) -> float:
+        """
+        Update the drone's position based on its velocity.
 
-        # rate of rotation upon button presses
-        self.diff_amplitude = 0.003
-
-        # Default propeller force
-        self.thruster_default = 0.04
-
-        self.mass = 1
-
-        # Length from center of mass to propeller
-        self.arm = 25
-
-    def kia(self):
-        self.is_alive = False
-
-    def action(self, key):
-        self.moving = True
-
-        # Resetting values
-        self.acceleration_x = 0
-        self.acceleration_y = self.gravity
-        self.angular_acceleration = 0
-        thruster_left = self.thruster_default
-        thruster_right = self.thruster_default
-
-        # Adjusting the thrust based on key press
-        if key==0:
-            thruster_left += self.thruster_amplitude
-            thruster_right += self.thruster_amplitude
-        if key==1:
-            thruster_left -= self.thruster_amplitude
-            thruster_right -= self.thruster_amplitude
-        if key==2:
-            thruster_left -= self.diff_amplitude
-        if key==3:
-            thruster_right -= self.diff_amplitude
+        Returns:
+            The updated velocity along the x-axis.
+        """
+        # Updating the positions
+        self._rect.y += self._velocity_y
         
-        total_thrust = thruster_left + thruster_right
+        return self._velocity_x
+    
+    def kia(self) -> None:
+        """Set the drone as not alive."""
+        self._is_alive = False
+
+    def get_rect_lines(self) -> tuple:
+        """
+        Get the lines representing the rotated rectangle around the drone.
+
+        Returns:
+            A list of tuples representing the four lines (start, end).
+        """
+        x, y = self._rect.x, self._rect.y
+        w, h = self._rect.width, self._rect.height - 35
+        top_left = (x, y)
+        top_right = (x + w, y)
+        bottom_left = (x, y + h)
+        bottom_right = (x + w, y + h)
+
+        top_left = self._rotate_point(top_left)
+        top_right = self._rotate_point(top_right)
+        bottom_left = self._rotate_point(bottom_left)
+        bottom_right = self._rotate_point(bottom_right)
+
+        # Return the four lines as tuples (start, end)
+        return [(top_left, top_right), (top_right, bottom_right),
+                (bottom_right, bottom_left), (bottom_left, top_left)]
+    
+    def _rotate_point(self, point: tuple) -> (int, int):
+        """
+        Rotate a point around the center of the drone.
+
+        Parameters:
+            - point: Coordinates of the point.
+
+        Returns:
+            The rotated coordinates.
+        """
+        cx, cy = self._rect.center
+        px, py = point
+
         angle_radian = self.angle * pi / 180
+        # Calculate the rotated coordinates
+        rotated_x = cx + cos(-angle_radian) * (px - cx) - sin(-angle_radian) * (py - cy)
+        rotated_y = cy + sin(-angle_radian) * (px - cx) + cos(-angle_radian) * (py - cy)
 
-        # calculate x y acceleration based on angle
-        self.acceleration_x += (-(total_thrust) * sin(angle_radian) / self.mass)
-        self.acceleration_y += (-(total_thrust) * cos(angle_radian) / self.mass)
+        return int(rotated_x), int(rotated_y)
 
-        # negative = right rotation in pygame
-        self.angular_acceleration += self.arm * (thruster_right - thruster_left) / self.mass
-
-        # update velocities
-        self.velocity_x += self.acceleration_x
-        self.velocity_y += self.acceleration_y
-        self.angular_speed += self.angular_acceleration
-
-    def update(self):
-        if(not self.is_alive):
-            return
-        
-        # pygame.transform.rotate(self.image, self.angle)
-
-        #updating the positions 
-        # self.rect.x += self.velocity_x
-        self.rect.y += self.velocity_y
-        self.angle += self.angular_speed
-
-        #make it stay on the screen and not move off
-        if self.rect.left < 0:
-            self.rect.left = 0
-        if self.rect.right > self.screen_width:
-            self.rect.right = self.screen_width
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > self.screen_height:
-            self.rect.bottom = self.screen_height
-
-def main():
-    # Initialize Pygame, load sprites
-    FramePerSec = pygame.time.Clock()
-
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
-    drone_group = pygame.sprite.Group()
-    image = pygame.image.load(DRONE_IMAGE).convert_alpha()
-    drone = Drone(100, int(HEIGHT/2), WIDTH, HEIGHT, image)
-    drone_group.add(drone)
-
-    # Game loop
-    while True:
-        pygame.event.get()
-
-        # Display background
-        screen.fill((131, 176, 181))
-        
-        key = pygame.key.get_pressed()
-        drone.action(key)
-        drone.update()
-
-        # rotate drone sprite according to the current calculation of the rotation
-        agent_copy = pygame.transform.rotate(drone.image, drone.angle)
-        screen.blit(
-            agent_copy,
-            (
-                drone.rect.x,
-                drone.rect.y,
-            ),
-        )
-
-        pygame.display.update()
-
-        pygame.display.update()
-        FramePerSec.tick(FPS)
+    @property
+    def position(self) -> (int, int): 
+        """Get the current position of the drone."""
+        return (self.position_x, self.position_y)
     
-if __name__=="__main__":
-    main()
-
-def main():
-    # Initialize Pygame, load sprites
-    FramePerSec = pygame.time.Clock()
-
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
-    drone_group = pygame.sprite.Group()
-    image = pygame.image.load(DRONE_IMAGE).convert_alpha()
-    drone = Drone(100, int(HEIGHT/2), WIDTH, HEIGHT, image)
-    drone_group.add(drone)
-
-    # Game loop
-    while True:
-        pygame.event.get()
-
-        # Display background
-        screen.fill((131, 176, 181))
-        
-        key = pygame.key.get_pressed()
-        drone.action(key)
-        drone.update()
-
-        # rotate drone sprite according to the current calculation of the rotation
-        agent_copy = pygame.transform.rotate(drone.image, drone.angle)
-        screen.blit(
-            agent_copy,
-            (
-                drone.rect.x,
-                drone.rect.y,
-            ),
-        )
-
-        pygame.display.update()
-
-        pygame.display.update()
-        FramePerSec.tick(FPS)
+    @property
+    def position_x(self) -> int: 
+        """Get the x-coordinate of the drone's center."""
+        return self._rect.center[0]
     
-if __name__=="__main__":
-    main()
+    @property
+    def position_y(self) -> int: 
+        """Get the y-coordinate of the drone's center."""
+        return self._rect.center[1]-18
+    
+    @property
+    def velocity_x(self) -> float: 
+        """Get the velocity along the x-axis."""
+        return self._velocity_x
+    
+    @property
+    def velocity_y(self) -> float: 
+        """Get the velocity along the y-axis."""
+        return self._velocity_y
+    
+    @property
+    def angle(self) -> float: 
+        """Get the current angle of the drone."""
+        return self._physics.angle
+    
+    @property
+    def angular_speed(self) -> float: 
+        """Get the angular speed of the drone."""
+        return self._physics.angular_speed
