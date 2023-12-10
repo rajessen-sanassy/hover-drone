@@ -11,7 +11,7 @@
 `python3 -m venv venv`
 ## activate environement
 Mac: `source venv/bin/activate`<br>
-Windows: `/venv/bin/activate`
+Windows: `/venv/Scripts/activate` or `/venv/Scripts/Activate.ps1` if running on powershell
 
 ## install requirements
 `pip3 install -r requirements.txt`
