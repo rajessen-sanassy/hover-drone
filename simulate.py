@@ -13,23 +13,13 @@ def _get_args():
         "--mode", "-m",
         type=str,
         default="human",
-        choices=["human", 'model'],
+        choices=["human", "model_QRDQN", "model_PPO", "model_SAC", "model_TQC_1", "model_TQC_2"],
         help="The execution mode for the game.",
     )
 
     return parser.parse_args()
 
-def run_env(env):
-    d1 = "performant_models/QRDQN_2000000_steps.zip"
-    d2 = "performant_models/QRDQN_4000000_steps.zip"
-    d3 = "performant_models/PPO_900000_steps.zip"
-
-    m1 = "performant_models/TQC_300000_steps.zip"
-    m2 = "performant_models/TQC_900000_steps.zip"
-    s1 = "tmp/SAC_1300000_steps.zip"
-    
-    model = TQC.load(m2, env=env)
-
+def run_env(model):    
     vec_env = model.get_env()
     obs = vec_env.reset()
     while True:
@@ -53,11 +43,33 @@ def main():
     args = _get_args()
 
     if args.mode == "human":
-        env = HoverDroneEnv(visualize=True)
+        env = HoverDroneEnv(visualize=False)
         env.run_human()
-    elif args.mode == "model":
+    elif args.mode == "model_QRDQN":
+        model = "performant_models/QRDQN_4000000_steps.zip"
+        env = HoverDroneEnv(visualize=True, continuous=False)
+        model = QRDQN.load(model, env=env)
+        run_env(model)
+    elif args.mode == "model_PPO":
+        model = "performant_models/PPO_900000_steps.zip"
+        env = HoverDroneEnv(visualize=True, continuous=False)
+        model = PPO.load(model, env=env)
+        run_env(model)
+    elif args.mode == "model_SAC":
+        model = "tmp/SAC_1300000_steps.zip"
         env = HoverDroneEnv(visualize=True, continuous=True)
-        run_env(env)
+        model = SAC.load(model, env=env)
+        run_env(model)
+    elif args.mode == "model_TQC_1":
+        model = "performant_models/TQC_300000_steps.zip"
+        env = HoverDroneEnv(visualize=True, continuous=True)
+        model = TQC.load(model, env=env)
+        run_env(model)
+    elif args.mode == "model_TQC_2":
+        model = "performant_models/TQC_900000_steps.zip"
+        env = HoverDroneEnv(visualize=True, continuous=True)
+        model = TQC.load(model, env=env)
+        run_env(model)
     else:
         print("Invalid mode!")
 

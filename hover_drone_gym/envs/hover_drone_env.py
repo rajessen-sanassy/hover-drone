@@ -30,6 +30,22 @@ class HoverDroneEnv(gym.Env):
         self._game = None
         self._renderer = None
 
+        """
+        Initialize the HoverDroneEnv environment.
+
+        Parameters:
+            - screen_size: Tuple, size of the screen for rendering (width and height).
+            - _building_gap: Int, gap between buildings.
+            - _spawn_distance: Int, distance between buildings for spawning.
+            - _FPS: Int, frames per second for rendering.
+            - _time_limit: Int, time limit for an episode.
+            - render: Bool, whether to render frames or not.
+            - continuous: Bool, whether to use continuous action space.
+            - visualize: Bool, whether to visualize the observation space in environment.
+
+        Sets up the observation and action spaces based on continuous or discrete action.
+        """
+
         if(self._continuous):
             self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
         else:
@@ -46,7 +62,13 @@ class HoverDroneEnv(gym.Env):
             
         })
 
-    def _get_obs(self):
+    def _get_obs(self) -> dict:
+        """
+        Get the current observation of the environment.
+
+        Returns:
+            - Dictionary, current observation.
+        """
         return {
             # 'distance_to_target': self._game.get_distance_to_target()/780,
             # 'angle_to_target': self._game.get_angle_to_target(),
@@ -57,10 +79,26 @@ class HoverDroneEnv(gym.Env):
             'angle_velocity': self._game.get_angle_velocity(),
         }
 
-    def _get_info(self):
+    def _get_info(self) -> dict:
+        """
+        Get additional information about the environment.
+
+        Returns:
+            - Dictionary, game score.
+        """
         return dict({"score": self._game.score})
     
-    def _get_reward(self, dead, case):
+    def _get_reward(self, dead: bool, case: int) -> float:
+        """
+        Calculate the reward based on the current state.
+
+        Parameters:
+            - dead: Bool, whether the agent is dead.
+            - case: Int, reward case identifier.
+
+        Returns:
+            - Float, calculated reward.
+        """
         reward = 0
 
         # staying alive 
@@ -88,7 +126,16 @@ class HoverDroneEnv(gym.Env):
         
         return reward
     
-    def step(self, action):
+    def step(self, action: int or np.array) -> tuple:
+        """
+        Execute one step in the environment.
+
+        Parameters:
+            - action: Action taken by the agent.
+
+        Returns:
+            - Tuple: (observation, reward, terminated, truncated, info)
+        """
         reward = 0
         self._time += 1 / self._FPS
         dead = self._game.action(action)
@@ -108,7 +155,16 @@ class HoverDroneEnv(gym.Env):
         
         return obs, reward, terminated, truncated, info
     
-    def reset(self, seed=None):
+    def reset(self, seed=None) -> tuple:
+        """
+        Reset the environment to the initial state.
+
+        Parameters:
+            - seed: Seed for randomization.
+
+        Returns:
+            - Tuple: (observation, info)
+        """
         super().reset(seed=seed)
         self._game = Game(screen_size=self._screen_size, 
                           building_gap=self._building_gap, 
@@ -123,7 +179,15 @@ class HoverDroneEnv(gym.Env):
 
         return self._get_obs(), self._get_info()
 
-    def render(self, reward=None):
+    def render(self, reward=None) -> None:
+        """
+        Render the current state of the environment.
+
+        Parameters:
+            - reward: Optional, reward value to display in rendering.
+
+        Renders the environment state using the designated renderer.
+        """
         if self._renderer is None:
             self._renderer = Display(screen_size=self._screen_size,
                                      FPS=self._FPS,
@@ -134,7 +198,15 @@ class HoverDroneEnv(gym.Env):
         self._renderer.draw_surface(reward)
         self._renderer.update_display()
     
-    def run_human(self):
+    def run_human(self) -> None:
+        """
+        Run the environment in human mode for manual interaction.
+
+        Raises:
+            - RuntimeError if attempting to run with continuous action space.
+
+        Resets the environment and allows manual control, updating the rendering accordingly.
+        """
         if self._continuous:
             raise RuntimeError(
                 "Cannot run continuous action space in human mode."
@@ -150,7 +222,12 @@ class HoverDroneEnv(gym.Env):
                 reward = 0
                 self.reset()
 
-    def close(self):
+    def close(self) -> None:
+        """
+        Close the environment.
+
+        Closes the renderer and performs necessary cleanup.
+        """
         if self._renderer is not None:
             self._renderer = None
             import pygame

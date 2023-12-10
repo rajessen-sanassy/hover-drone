@@ -1,6 +1,5 @@
 import os
 import pygame
-from typing import Any, Dict
 
 BASE_PATH = os.path.realpath("hover_drone_gym/assets")
 DRONE_IMAGE1 = os.path.join(BASE_PATH, 'drone_1.png')
@@ -8,7 +7,7 @@ DRONE_IMAGE2 = os.path.join(BASE_PATH, 'drone_2.png')
 BUILDING_IMAGE = os.path.join(BASE_PATH, 'building.png')
 BG_IMAGE = os.path.join(BASE_PATH, 'background.png')
 
-def load_images() -> Dict[str, Any]:
+def load_images() -> dict[str]:
     images = {}
     
     try:
